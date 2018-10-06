@@ -23,6 +23,8 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -462,7 +464,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (!block.getWorld().getName().equals(arena.world)) return;
         if (isInArena(block)) {
             if (state.gameState == GameState.PLACE
-                && (block.getType() == Material.WALL_SIGN || block.getType() == Material.SIGN)
+                && block.getType() == Material.SIGN
                 && arena.grassBlocks.contains(Vec.v(block.getRelative(0, -1, 0)))) {
                 for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
                     Placed placed = iter.next();
@@ -504,16 +506,17 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 announceArena(ChatColor.GREEN + placed.ownerName + "'s sign was destroyed. Its message to the world:");
                 iter.remove();
                 Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
-                org.bukkit.block.Sign sign = (org.bukkit.block.Sign)signBlock.getState();
-                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 1.0f, 2.0f);
-                block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
-                if (sign != null) {
+                BlockState blockState = signBlock.getState();
+                if (blockState instanceof Sign) {
+                    Sign sign = (Sign)blockState;
                     for (String line: sign.getLines()) {
                         if (line != null) {
                             announceArena(ChatColor.GREEN + "> " + ChatColor.WHITE + line);
                         }
                     }
                 }
+                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 1.0f, 2.0f);
+                block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
             }
         }
         block.getRelative(0, 1, 0).setType(Material.GRASS);
