@@ -495,11 +495,13 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             event.setCancelled(true);
             return;
         }
+        boolean removed = false;
         for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
             Placed placed = iter.next();
             if (placed.x == block.getX() && placed.z == block.getZ()) {
                 announceArena(ChatColor.GREEN + placed.ownerName + "'s sign was destroyed. Its message to the world:");
                 iter.remove();
+                removed = true;
                 Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
                 BlockState blockState = signBlock.getState();
                 if (blockState instanceof Sign) {
@@ -514,6 +516,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
             }
         }
+        if (removed) saveState();
         block.getRelative(0, 1, 0).setType(Material.GRASS);
         block.getWorld().playSound(block.getLocation(), Sound.BLOCK_GRASS_BREAK, SoundCategory.MASTER, 1.0f, 1.0f);
         block.getWorld().spawnParticle(Particle.BLOCK_DUST, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0, Material.GRASS_BLOCK.createBlockData());
