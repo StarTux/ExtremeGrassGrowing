@@ -462,26 +462,21 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         Player player = event.getPlayer();
         Block block = event.getBlock();
         if (!block.getWorld().getName().equals(arena.world)) return;
-        if (isInArena(block)) {
-            if (state.gameState == GameState.PLACE
-                && block.getType() == Material.SIGN
-                && arena.grassBlocks.contains(Vec.v(block.getRelative(0, -1, 0)))) {
-                for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
-                    Placed placed = iter.next();
-                    if (placed.owner.equals(player.getUniqueId())) {
-                        getServer().getWorld(arena.world).getBlockAt(placed.x, placed.y, placed.z).setType(Material.AIR);
-                        iter.remove();
-                    }
-                }
-                state.placedSigns.add(new Placed(player.getUniqueId(), player.getName(), block.getX(), block.getY(), block.getZ()));
-                saveState();
-                event.setCancelled(false);
-                player.sendMessage(ChatColor.GREEN + "Sign placed.");
-            } else {
-                if (!player.isOp()) {
-                    event.setCancelled(true);
+        if (!isInArena(block)) return;
+        if (state.gameState == GameState.PLACE
+            && block.getType() == Material.SIGN
+            && arena.grassBlocks.contains(Vec.v(block.getRelative(0, -1, 0)))) {
+            for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
+                Placed placed = iter.next();
+                if (placed.owner.equals(player.getUniqueId())) {
+                    getServer().getWorld(arena.world).getBlockAt(placed.x, placed.y, placed.z).setType(Material.AIR);
+                    iter.remove();
                 }
             }
+            state.placedSigns.add(new Placed(player.getUniqueId(), player.getName(), block.getX(), block.getY(), block.getZ()));
+            saveState();
+            event.setCancelled(false);
+            player.sendMessage(ChatColor.GREEN + "Sign placed.");
         } else {
             if (!player.isOp()) {
                 event.setCancelled(true);
