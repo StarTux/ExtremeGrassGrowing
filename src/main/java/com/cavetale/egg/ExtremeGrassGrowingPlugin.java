@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.Value;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -26,7 +27,9 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Snowman;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -46,6 +49,8 @@ import org.bukkit.plugin.java.annotation.plugin.Description;
 import org.bukkit.plugin.java.annotation.plugin.Plugin;
 import org.bukkit.plugin.java.annotation.plugin.Website;
 import org.bukkit.plugin.java.annotation.plugin.author.Author;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 @Plugin(name = "ExtremeGrassGrowing", version = "0.1")
 @Description("Extreme Grass Growing Event")
@@ -66,6 +71,9 @@ import org.bukkit.plugin.java.annotation.plugin.author.Author;
                  + "\n/egga grass [clear|remove] - change grass blocks"
                  + "\n/egga viewer [clear|remove] - change viewer blocks"
                  + "\n/egga state PAUSE|PLACE|GROW - set game state"
+                 + "\n/egga clearwinners - clear winners"
+                 + "\n/egga snow - toggle snow"
+                 + "\n/egga list - list placed signs"
                  + "\n/egga hi - highlight arena blocks")})
 @Permissions({
         @Permission(name = "egg.egg",
@@ -74,7 +82,7 @@ import org.bukkit.plugin.java.annotation.plugin.author.Author;
         @Permission(name = "egg.admin",
                     desc = "Use /egga",
                     defaultValue = PermissionDefault.OP)})
-public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Listener {
+public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Listener, Runnable {
     private Arena arena = new Arena();
     private State state = new State();
     private static final String META_ARENA = "egg.arena";
@@ -87,6 +95,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         loadArena();
         getCommand("egga").setExecutor((s, c, l, a) -> onAdminCommand(s, a));
         getServer().getPluginManager().registerEvents(this, this);
+        Bukkit.getScheduler().runTaskTimer(this, this, 1L, 1L);
     }
 
     @Override
@@ -236,6 +245,27 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             }
             return true;
         }
+        case "clearwinners": {
+            this.state.winners.clear();
+            saveState();
+            sender.sendMessage("Winners cleared");
+            return true;
+        }
+        case "snow": {
+            this.state.snow = !this.state.snow;
+            saveState();
+            sender.sendMessage("Snow is now " + (this.state.snow ? "on" : "off") + ".");
+            return true;
+        }
+        case "list": {
+            sender.sendMessage(this.state.placedSigns.size() + " placed signs:");
+            for (Placed placed: this.state.placedSigns) {
+                sender.sendMessage(placed.getOwnerName()
+                                   + " " + placed.getX() + " " + placed.getY() + " " + placed.getZ());
+            }
+            sender.sendMessage("");
+            return true;
+        }
         case "hi": {
             if (player == null) return false;
             for (Vec v: arena.viewerBlocks) {
@@ -253,13 +283,78 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         }
     }
 
+    @Override
+    public void run() {
+        if (!this.state.snow) return;
+        if (this.state.gameState != GameState.GROW) return;
+        World world = Bukkit.getWorld(this.arena.world);
+        if (world == null) return;
+        for (Entity e: world.getEntities()) {
+            if (!(e instanceof Snowman)) continue;
+            handleSnowman((Snowman)e);
+        }
+    }
+
+    void handleSnowman(Snowman snowman) {
+        Block block = snowman.getLocation().getBlock().getRelative(0, -1, 0);
+        Vec vec = Vec.v(block);
+        if (!this.arena.grassBlocks.contains(vec)) return;
+        if (block.getType() == Material.SNOW_BLOCK) return;
+        block.setType(Material.SNOW_BLOCK);
+        if (purgeSign(block)) {
+            Snowman snowman2 = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5), Snowman.class);
+            snowman2.setDerp(true);
+            snowman2.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 9999, 5, true, false));
+            checkForWinner();
+        }
+        block.getRelative(0, 1, 0).setType(Material.SNOW);
+    }
+
+    boolean purgeSign(Block block) {
+        for (Iterator<Placed> iter = this.state.placedSigns.iterator(); iter.hasNext();) {
+            Placed placed = iter.next();
+            if (placed.x == block.getX() && placed.z == block.getZ()) {
+                announceArena(ChatColor.GREEN + placed.ownerName + "'s sign was destroyed. Its message to the world:");
+                iter.remove();
+                Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
+                BlockState blockState = signBlock.getState();
+                if (blockState instanceof Sign) {
+                    Sign sign = (Sign)blockState;
+                    for (String line: sign.getLines()) {
+                        if (line != null) {
+                            announceArena(ChatColor.GREEN + "> " + ChatColor.WHITE + line);
+                        }
+                    }
+                }
+                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 1.0f, 2.0f);
+                block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
+                return true;
+            }
+        }
+        return false;
+    }
+
     void setupGameState(GameState gameState) {
         switch (gameState) {
-        case PAUSE: break;
+        case PAUSE: {
+            if (this.state.snow) {
+                World world = Bukkit.getWorld(this.arena.world);
+                if (world != null) {
+                    for (Entity e: world.getEntities()) {
+                        if (!(e instanceof Snowman)) continue;
+                        if (isInArena(e)) e.remove();
+                    }
+                }
+            }
+        }
         case PLACE: {
             for (Vec vec: arena.grassBlocks) {
                 Block block = getServer().getWorld(arena.world).getBlockAt(vec.x, vec.y, vec.z);
-                block.setType(Material.DIRT);
+                if (this.state.snow) {
+                    block.setType(Material.GRASS_BLOCK);
+                } else {
+                    block.setType(Material.DIRT);
+                }
                 block.getRelative(0, 1, 0).setType(Material.AIR);
             }
             for (Player player: getServer().getWorld(arena.world).getPlayers()) {
@@ -279,6 +374,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             }
             List<Vec> blocks = new ArrayList<>(arena.grassBlocks);
             if (blocks.size() > 0) {
+                int count = 0;
                 for (int i = 0; i < 10; i += 1) {
                     Vec vec = blocks.get(ThreadLocalRandom.current().nextInt(blocks.size()));
                     Block block = getServer().getWorld(arena.world).getBlockAt(vec.x, vec.y, vec.z);
@@ -289,7 +385,18 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                             break;
                         }
                     }
-                    if (!conflicts) block.setType(Material.GRASS_BLOCK);
+                    if (!conflicts) {
+                        if (this.state.snow) {
+                            if (count == 0) {
+                                Snowman snowman = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5), Snowman.class);
+                                snowman.setDerp(true);
+                                snowman.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 9999, 5, true, false));
+                            }
+                        } else {
+                            block.setType(Material.GRASS_BLOCK);
+                        }
+                        count += 1;
+                    }
                 }
             }
             announceArena(ChatColor.GREEN + "Watch the grass spread!");
@@ -351,6 +458,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         GameState gameState = GameState.PAUSE;
         List<Placed> placedSigns = new ArrayList<>();
         List<String> winners = new ArrayList<>();
+        boolean snow = false;
     }
 
     void loadArena() {
@@ -415,8 +523,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     // --- Event Handlers
 
-    boolean isInArena(Player player) {
-        Location loc = player.getLocation();
+    boolean isInArena(Entity entity) {
+        Location loc = entity.getLocation();
         return arena.area.contains(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
 
@@ -486,6 +594,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     @EventHandler
     public void onBlockSpread(BlockSpreadEvent event) {
+        if (this.state.snow) return;
         Block block = event.getBlock();
         if (!block.getWorld().getName().equals(arena.world)) return;
         if (event.getSource().getType() != Material.GRASS_BLOCK
@@ -495,32 +604,16 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             event.setCancelled(true);
             return;
         }
-        boolean removed = false;
-        for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
-            Placed placed = iter.next();
-            if (placed.x == block.getX() && placed.z == block.getZ()) {
-                announceArena(ChatColor.GREEN + placed.ownerName + "'s sign was destroyed. Its message to the world:");
-                iter.remove();
-                removed = true;
-                Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
-                BlockState blockState = signBlock.getState();
-                if (blockState instanceof Sign) {
-                    Sign sign = (Sign)blockState;
-                    for (String line: sign.getLines()) {
-                        if (line != null) {
-                            announceArena(ChatColor.GREEN + "> " + ChatColor.WHITE + line);
-                        }
-                    }
-                }
-                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 1.0f, 2.0f);
-                block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
-            }
-        }
+        boolean removed = purgeSign(block);
         if (removed) saveState();
         block.getRelative(0, 1, 0).setType(Material.GRASS);
         block.getWorld().playSound(block.getLocation(), Sound.BLOCK_GRASS_BREAK, SoundCategory.MASTER, 1.0f, 1.0f);
         block.getWorld().spawnParticle(Particle.BLOCK_DUST, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0, Material.GRASS_BLOCK.createBlockData());
-        if (state.placedSigns.size() == 1) {
+        if (removed) checkForWinner();
+    }
+
+    void checkForWinner() {
+        if (this.state.placedSigns.size() == 1) {
             announceArena(ChatColor.GREEN + state.placedSigns.get(0).ownerName + " wins the game!");
             state.winners.add(state.placedSigns.get(0).ownerName);
             setupGameState(GameState.PAUSE);
