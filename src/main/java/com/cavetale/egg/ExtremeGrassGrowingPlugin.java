@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -52,36 +53,6 @@ import org.bukkit.plugin.java.annotation.plugin.author.Author;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-@Plugin(name = "ExtremeGrassGrowing", version = "0.1")
-@Description("Extreme Grass Growing Event")
-@ApiVersion(ApiVersion.Target.v1_13)
-@Author("StarTux")
-@Website("https://cavetale.com")
-@Commands({
-        @Command(name = "egg",
-                 desc = "Warp to the EGG arena",
-                 aliases = {},
-                 permission = "egg.egg",
-                 usage = "/egg"),
-        @Command(name = "eggadmin",
-                 desc = "Extreme Grass Growing Admin Interface",
-                 aliases = {"egga"},
-                 permission = "egg.admin",
-                 usage = "/egga area - Set area"
-                 + "\n/egga grass [clear|remove] - change grass blocks"
-                 + "\n/egga viewer [clear|remove] - change viewer blocks"
-                 + "\n/egga state PAUSE|PLACE|GROW - set game state"
-                 + "\n/egga clearwinners - clear winners"
-                 + "\n/egga snow - toggle snow"
-                 + "\n/egga list - list placed signs"
-                 + "\n/egga hi - highlight arena blocks")})
-@Permissions({
-        @Permission(name = "egg.egg",
-                    desc = "Use /egg",
-                    defaultValue = PermissionDefault.OP),
-        @Permission(name = "egg.admin",
-                    desc = "Use /egga",
-                    defaultValue = PermissionDefault.OP)})
 public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Listener, Runnable {
     private Arena arena = new Arena();
     private State state = new State();
@@ -359,7 +330,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             }
             for (Player player: getServer().getWorld(arena.world).getPlayers()) {
                 if (isInArena(player)) {
-                    player.getInventory().addItem(new ItemStack(Material.SIGN));
+                    player.getInventory().addItem(new ItemStack(randomSign()));
                 }
             }
             state.placedSigns.clear();
@@ -565,6 +536,31 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         }
     }
 
+    Material randomSign() {
+        List<Material> mats = Arrays
+            .asList(Material.ACACIA_SIGN,
+                    Material.BIRCH_SIGN,
+                    Material.DARK_OAK_SIGN,
+                    Material.JUNGLE_SIGN,
+                    Material.OAK_SIGN,
+                    Material.SPRUCE_SIGN);
+        return mats.get(ThreadLocalRandom.current().nextInt(mats.size()));
+    }
+
+    boolean isSign(Material mat) {
+        switch (mat) {
+        case ACACIA_SIGN:
+        case BIRCH_SIGN:
+        case DARK_OAK_SIGN:
+        case JUNGLE_SIGN:
+        case OAK_SIGN:
+        case SPRUCE_SIGN:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
@@ -572,7 +568,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (!block.getWorld().getName().equals(arena.world)) return;
         if (!isInArena(block)) return;
         if (state.gameState == GameState.PLACE
-            && block.getType() == Material.SIGN
+            && isSign(block.getType())
             && arena.grassBlocks.contains(Vec.v(block.getRelative(0, -1, 0)))) {
             for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
                 Placed placed = iter.next();

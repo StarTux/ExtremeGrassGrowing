@@ -1,0 +1,32 @@
+main: com.cavetale.egg.ExtremeGrassGrowingPlugin
+name: ExtremeGrassGrowing
+version: '0.1'
+api-version: '1.13'
+description: Extreme Grass Growing Event
+author: StarTux
+website: https://github.com/StarTux/ExtremeGrassGrowing
+depend: []
+softdepend: []
+commands:
+  egg:
+    description: Warp to the EGG arena
+    permission: egg.egg
+    usage: /egg
+  eggadmin:
+    aliases: egga
+    description: Extreme Grass Growing Admin Interface
+    permission: egg.admin
+    usage: |-
+      /egga area - Set area
+      /egga grass [clear|remove] - change grass blocks
+      /egga viewer [clear|remove] - change viewer blocks
+      /egga state PAUSE|PLACE|GROW - set game state
+      /egga clearwinners - clear winners
+      /egga snow - toggle snow
+      /egga list - list placed signs
+      /egga hi - highlight arena blocks
+permissions:
+  egg.egg:
+    description: Use /egg
+  egg.admin:
+    description: Use /egga
