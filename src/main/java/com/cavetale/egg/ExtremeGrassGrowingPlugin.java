@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,6 +28,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -39,17 +41,7 @@ import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.plugin.java.annotation.command.Command;
-import org.bukkit.plugin.java.annotation.command.Commands;
-import org.bukkit.plugin.java.annotation.permission.Permission;
-import org.bukkit.plugin.java.annotation.permission.Permissions;
-import org.bukkit.plugin.java.annotation.plugin.ApiVersion;
-import org.bukkit.plugin.java.annotation.plugin.Description;
-import org.bukkit.plugin.java.annotation.plugin.Plugin;
-import org.bukkit.plugin.java.annotation.plugin.Website;
-import org.bukkit.plugin.java.annotation.plugin.author.Author;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -57,6 +49,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     private Arena arena = new Arena();
     private State state = new State();
     private static final String META_ARENA = "egg.arena";
+    Random random = ThreadLocalRandom.current();
 
     // --- Plugin Overrides
 
@@ -74,9 +67,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, org.bukkit.command.Command command, String alias, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command,
+                             String alias, String[] args) {
         if (!(sender instanceof Player)) return false;
-        Player player = (Player)sender;
+        Player player = (Player) sender;
         warpPlayerOutside(player);
         return true;
     }
@@ -84,13 +78,19 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     void warpPlayerOutside(Player player) {
         List<Vec> blocks = new ArrayList<>(arena.viewerBlocks);
         if (blocks.size() > 0) {
-            Vec block = blocks.get(ThreadLocalRandom.current().nextInt(blocks.size()));
-            player.teleport(new Location(getServer().getWorld(arena.world), (double)block.x + 0.5, (double)block.y + 1.0, (double)block.z + 0.5, player.getLocation().getYaw(), player.getLocation().getPitch()));
+            Vec block = blocks.get(random.nextInt(blocks.size()));
+            Location loc = new Location(getServer().getWorld(arena.world),
+                                        (double) block.x + 0.5,
+                                        (double) block.y + 1.0,
+                                        (double) block.z + 0.5,
+                                        player.getLocation().getYaw(),
+                                        player.getLocation().getPitch());
+            player.teleport(loc);
         }
     }
 
     private boolean onAdminCommand(CommandSender sender, String[] args) {
-        Player player = sender instanceof Player ? (Player)sender : null;
+        Player player = sender instanceof Player ? (Player) sender : null;
         if (args.length == 0) {
             sender.sendMessage("State: " + state.gameState);
             sender.sendMessage("Placed signs: " + state.placedSigns.size());
@@ -103,45 +103,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 sender.sendMessage("Player expected.");
                 return true;
             }
-            boolean remove = false;
-            if (args.length >= 2) {
-                switch (args[1]) {
-                case "remove": remove = true; break;
-                case "clear":
-                    arena.viewerBlocks.clear();
-                    saveArena();
-                    sender.sendMessage("Viewer blocks cleared.");
-                    return true;
-                default: return false;
-                }
-            }
-            Cuboid sel = getSelection(player);
-            if (sel != null) {
-                World world = player.getWorld();
-                Set<Vec> blocks = new HashSet<>();
-                for (int y = sel.lo.y; y <= sel.hi.y; y += 1) {
-                    for (int z = sel.lo.z; z <= sel.hi.z; z += 1) {
-                        for (int x = sel.lo.x; x <= sel.hi.x; x += 1) {
-                            Block block = world.getBlockAt(x, y, z);
-                            if (block.getType().isSolid()
-                                && block.getRelative(0, 1, 0).isEmpty()
-                                && block.getRelative(0, 2, 0).isEmpty()) {
-                                blocks.add(Vec.v(x, y, z));
-                            }
-                        }
-                    }
-                }
-                if (remove) {
-                    arena.viewerBlocks.removeAll(blocks);
-                } else {
-                    arena.viewerBlocks.addAll(blocks);
-                }
-                sender.sendMessage("" + blocks.size() + " viewer blocks.");
-                saveArena();
-            } else {
-                sender.sendMessage("No selection made.");
-            }
-            return true;
+            return viewerCommand(player, args);
         }
         case "grass": {
             if (player == null) {
@@ -232,7 +194,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             sender.sendMessage(this.state.placedSigns.size() + " placed signs:");
             for (Placed placed: this.state.placedSigns) {
                 sender.sendMessage(placed.getOwnerName()
-                                   + " " + placed.getX() + " " + placed.getY() + " " + placed.getZ());
+                                   + " " + placed.getX()
+                                   + " " + placed.getY()
+                                   + " " + placed.getZ());
             }
             sender.sendMessage("");
             return true;
@@ -241,17 +205,61 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             if (player == null) return false;
             for (Vec v: arena.viewerBlocks) {
                 Block block = player.getWorld().getBlockAt(v.x, v.y, v.z);
-                player.sendBlockChange(block.getLocation(), Material.GLOWSTONE.createBlockData());
+                player.sendBlockChange(block.getLocation(),
+                                       Material.GLOWSTONE.createBlockData());
             }
             for (Vec v: arena.grassBlocks) {
                 Block block = player.getWorld().getBlockAt(v.x, v.y, v.z);
-                player.sendBlockChange(block.getLocation(), Material.REDSTONE_BLOCK.createBlockData());
+                player.sendBlockChange(block.getLocation(),
+                                       Material.REDSTONE_BLOCK.createBlockData());
             }
             sender.sendMessage("Highlighting blocks");
             return true;
         }
         default: return false;
         }
+    }
+
+    boolean viewerCommand(Player player, String[] args) {
+        boolean remove = false;
+        if (args.length >= 2) {
+            switch (args[1]) {
+            case "remove": remove = true; break;
+            case "clear":
+                arena.viewerBlocks.clear();
+                saveArena();
+                player.sendMessage("Viewer blocks cleared.");
+                return true;
+            default: return false;
+            }
+        }
+        Cuboid sel = getSelection(player);
+        if (sel != null) {
+            World world = player.getWorld();
+            Set<Vec> blocks = new HashSet<>();
+            for (int y = sel.lo.y; y <= sel.hi.y; y += 1) {
+                for (int z = sel.lo.z; z <= sel.hi.z; z += 1) {
+                    for (int x = sel.lo.x; x <= sel.hi.x; x += 1) {
+                        Block block = world.getBlockAt(x, y, z);
+                        if (block.getType().isSolid()
+                            && block.getRelative(0, 1, 0).isEmpty()
+                            && block.getRelative(0, 2, 0).isEmpty()) {
+                            blocks.add(Vec.v(x, y, z));
+                        }
+                    }
+                }
+            }
+            if (remove) {
+                arena.viewerBlocks.removeAll(blocks);
+            } else {
+                arena.viewerBlocks.addAll(blocks);
+            }
+            player.sendMessage("" + blocks.size() + " viewer blocks.");
+            saveArena();
+        } else {
+            player.sendMessage("No selection made.");
+        }
+        return true;
     }
 
     @Override
@@ -262,7 +270,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (world == null) return;
         for (Entity e: world.getEntities()) {
             if (!(e instanceof Snowman)) continue;
-            handleSnowman((Snowman)e);
+            handleSnowman((Snowman) e);
         }
     }
 
@@ -273,9 +281,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (block.getType() == Material.SNOW_BLOCK) return;
         block.setType(Material.SNOW_BLOCK);
         if (purgeSign(block)) {
-            Snowman snowman2 = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5), Snowman.class);
+            Snowman snowman2 = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5),
+                                                      Snowman.class);
             snowman2.setDerp(true);
-            snowman2.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 9999, 5, true, false));
+            snowman2.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
+                                                      9999, 5, true, false));
             checkForWinner();
         }
         block.getRelative(0, 1, 0).setType(Material.SNOW);
@@ -285,20 +295,29 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         for (Iterator<Placed> iter = this.state.placedSigns.iterator(); iter.hasNext();) {
             Placed placed = iter.next();
             if (placed.x == block.getX() && placed.z == block.getZ()) {
-                announceArena(ChatColor.GREEN + placed.ownerName + "'s sign was destroyed. Its message to the world:");
+                announceArena(ChatColor.GREEN + placed.ownerName
+                              + "'s sign was destroyed. Its message to the world:");
                 iter.remove();
                 Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
                 BlockState blockState = signBlock.getState();
                 if (blockState instanceof Sign) {
-                    Sign sign = (Sign)blockState;
+                    Sign sign = (Sign) blockState;
                     for (String line: sign.getLines()) {
                         if (line != null) {
                             announceArena(ChatColor.GREEN + "> " + ChatColor.WHITE + line);
                         }
                     }
                 }
-                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 1.0f, 2.0f);
-                block.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0);
+                World world = block.getWorld();
+                world.playSound(block.getLocation(),
+                                Sound.ENTITY_GENERIC_EXPLODE,
+                                SoundCategory.MASTER,
+                                1.0f, 2.0f);
+                world.spawnParticle(Particle.EXPLOSION_LARGE,
+                                    block.getLocation().add(0.5, 1.5, 0.5),
+                                    8,
+                                    0.2, 0.2, 0.2,
+                                    0.0);
                 return true;
             }
         }
@@ -347,7 +366,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             if (blocks.size() > 0) {
                 int count = 0;
                 for (int i = 0; i < 10; i += 1) {
-                    Vec vec = blocks.get(ThreadLocalRandom.current().nextInt(blocks.size()));
+                    Vec vec = blocks.get(random.nextInt(blocks.size()));
                     Block block = getServer().getWorld(arena.world).getBlockAt(vec.x, vec.y, vec.z);
                     boolean conflicts = false;
                     for (Placed placed: state.placedSigns) {
@@ -359,9 +378,13 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     if (!conflicts) {
                         if (this.state.snow) {
                             if (count == 0) {
-                                Snowman snowman = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5), Snowman.class);
+                                Location loc = block.getLocation().add(0.5, 1.0, 0.5);
+                                Snowman snowman = block.getWorld().spawn(loc, Snowman.class);
                                 snowman.setDerp(true);
-                                snowman.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 9999, 5, true, false));
+                                PotionEffect effect;
+                                effect = new PotionEffect(PotionEffectType.SPEED,
+                                                          9999, 5, true, false);
+                                snowman.addPotionEffect(effect);
                             }
                         } else {
                             block.setType(Material.GRASS_BLOCK);
@@ -384,7 +407,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     @Value
     static class Vec {
         static final Vec ZERO = new Vec(0, 0, 0);
-        private final int x, y, z;
+        private final int x;
+        private final int y;
+        private final int z;
 
         static Vec v(int x, int y, int z) {
             return new Vec(x, y, z);
@@ -397,7 +422,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     @Value
     static class Cuboid {
         static final Cuboid ZERO = new Cuboid(Vec.ZERO, Vec.ZERO);
-        private final Vec lo, hi;
+        private final Vec lo;
+        private final Vec hi;
         boolean contains(int x, int y, int z) {
             return x >= lo.x && x <= hi.x
                 && y >= lo.y && y <= hi.y
@@ -416,7 +442,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     static class Placed {
         private final UUID owner;
         private final String ownerName;
-        private final int x, y, z;
+        private final int x;
+        private final int y;
+        private final int z;
     }
 
     enum GameState {
@@ -434,19 +462,23 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     void loadArena() {
         Gson gson = new Gson();
-        try {
-            arena = gson.fromJson(new FileReader(new File(getDataFolder(), "arena.json")), Arena.class);
-        } catch (FileNotFoundException fnfe) {
-            fnfe.printStackTrace();
+        File file = new File(getDataFolder(), "arena.json");
+        try (FileReader reader = new FileReader(file)) {
+            arena = gson.fromJson(reader, Arena.class);
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
     }
 
     void loadState() {
         Gson gson = new Gson();
-        try {
-            state = gson.fromJson(new FileReader(new File(getDataFolder(), "state.json")), State.class);
+        File file = new File(getDataFolder(), "state.json");
+        try (FileReader reader = new FileReader(file)) {
+            state = gson.fromJson(reader, State.class);
         } catch (FileNotFoundException fnfe) {
             state = new State();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
         }
     }
 
@@ -477,7 +509,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     // --- Selection Utility
 
     private Cuboid getSelection(Player player) {
-        int ax, ay, az, bx, by, bz;
+        int ax;
+        int ay;
+        int az;
+        int bx;
+        int by;
+        int bz;
         try {
             ax = player.getMetadata("SelectionAX").get(0).asInt();
             ay = player.getMetadata("SelectionAY").get(0).asInt();
@@ -509,7 +546,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (player.isOp()) return;
         if (!player.getWorld().getName().equals(arena.world)) return;
         if (isInArena(player)) {
-            if (!player.hasMetadata(META_ARENA)) player.setMetadata(META_ARENA, new FixedMetadataValue(this, true));
+            if (!player.hasMetadata(META_ARENA)) {
+                player.setMetadata(META_ARENA,
+                                   new FixedMetadataValue(this, true));
+            }
             switch (state.gameState) {
             case PAUSE: {
                 player.setGameMode(GameMode.ADVENTURE);
@@ -521,7 +561,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             }
             case GROW: {
                 player.setGameMode(GameMode.ADVENTURE);
-                if (arena.grassBlocks.contains(Vec.v(player.getLocation().getBlock().getRelative(0, -1, 0)))) {
+                Block block = player.getLocation().getBlock().getRelative(0, -1, 0);
+                if (arena.grassBlocks.contains(Vec.v(block))) {
                     warpPlayerOutside(player);
                 }
                 break;
@@ -544,7 +585,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     Material.JUNGLE_SIGN,
                     Material.OAK_SIGN,
                     Material.SPRUCE_SIGN);
-        return mats.get(ThreadLocalRandom.current().nextInt(mats.size()));
+        return mats.get(random.nextInt(mats.size()));
     }
 
     boolean isSign(Material mat) {
@@ -570,14 +611,20 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (state.gameState == GameState.PLACE
             && isSign(block.getType())
             && arena.grassBlocks.contains(Vec.v(block.getRelative(0, -1, 0)))) {
+            World world = getServer().getWorld(arena.world);
             for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
                 Placed placed = iter.next();
                 if (placed.owner.equals(player.getUniqueId())) {
-                    getServer().getWorld(arena.world).getBlockAt(placed.x, placed.y, placed.z).setType(Material.AIR);
+                    world.getBlockAt(placed.x, placed.y, placed.z).setType(Material.AIR);
                     iter.remove();
                 }
             }
-            state.placedSigns.add(new Placed(player.getUniqueId(), player.getName(), block.getX(), block.getY(), block.getZ()));
+            Placed placed = new Placed(player.getUniqueId(),
+                                       player.getName(),
+                                       block.getX(),
+                                       block.getY(),
+                                       block.getZ());
+            state.placedSigns.add(placed);
             saveState();
             event.setCancelled(false);
             player.sendMessage(ChatColor.GREEN + "Sign placed.");
@@ -603,8 +650,16 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         boolean removed = purgeSign(block);
         if (removed) saveState();
         block.getRelative(0, 1, 0).setType(Material.GRASS);
-        block.getWorld().playSound(block.getLocation(), Sound.BLOCK_GRASS_BREAK, SoundCategory.MASTER, 1.0f, 1.0f);
-        block.getWorld().spawnParticle(Particle.BLOCK_DUST, block.getLocation().add(0.5, 1.5, 0.5), 8, 0.2, 0.2, 0.2, 0.0, Material.GRASS_BLOCK.createBlockData());
+        block.getWorld().playSound(block.getLocation(),
+                                   Sound.BLOCK_GRASS_BREAK,
+                                   SoundCategory.MASTER,
+                                   1.0f, 1.0f);
+        block.getWorld().spawnParticle(Particle.BLOCK_DUST,
+                                       block.getLocation().add(0.5, 1.5, 0.5),
+                                       8,
+                                       0.2, 0.2, 0.2,
+                                       0.0,
+                                       Material.GRASS_BLOCK.createBlockData());
         if (removed) checkForWinner();
     }
 
