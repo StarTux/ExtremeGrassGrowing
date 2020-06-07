@@ -710,7 +710,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     void spreadTo(Block block) {
         Material flower = flowers.get(random.nextInt(flowers.size()));
-        boolean removed = purgeSign(block, flower.name().toLowerCase());
+        boolean removed = purgeSign(block, flower.name().toLowerCase().replace("_", " "));
         if (removed) {
             growCooldown = 200;
             saveState();
