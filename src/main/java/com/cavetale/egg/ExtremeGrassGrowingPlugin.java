@@ -156,7 +156,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                         }
                     }
                 }
-                arena.grassBlocks.addAll(blocks);
+                if (remove) {
+                    arena.grassBlocks.removeAll(blocks);
+                } else {
+                    arena.grassBlocks.addAll(blocks);
+                }
                 sender.sendMessage("" + blocks.size() + " grass blocks.");
                 saveArena();
             } else {
