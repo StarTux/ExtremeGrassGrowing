@@ -701,7 +701,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (event.getSource().getType() != Material.GRASS_BLOCK
             || event.getBlock().getType() != Material.DIRT) return;
         if (!arena.grassBlocks.contains(Vec.v(block))) return;
-        if (state.gameState != GameState.GROW) {
+        if (state.gameState != GameState.GROW || growCooldown > 0) {
             event.setCancelled(true);
             return;
         }
