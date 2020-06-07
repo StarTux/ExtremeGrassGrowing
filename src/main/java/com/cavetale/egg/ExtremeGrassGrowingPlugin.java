@@ -308,7 +308,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                                          0,
                                                          random.nextInt(2) - random.nextInt(2));
                 if (dirtBlock.getType() != Material.DIRT) continue;
-                if (!arena.grassBlocks.contains(new Vec(dirtBlock.getX(), dirtBlock.getY(), dirtBlock.getZ()))) continue;
+                if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
                 dirtBlock.setType(Material.GRASS_BLOCK);
                 growCooldown = 30;
                 spreadTo(dirtBlock);
@@ -402,7 +402,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         case GROW: {
             for (Player player: getServer().getWorld(arena.world).getPlayers()) {
                 if (isInArena(player)) {
-                    warpPlayerOutside(player);
+                    if (arena.grassBlocks.contains(Vec.v(player.getLocation().getBlock().getRelative(0, -1, 0)))) {
+                        warpPlayerOutside(player);
+                    }
                 }
             }
             List<Vec> blocks = new ArrayList<>(arena.grassBlocks);
