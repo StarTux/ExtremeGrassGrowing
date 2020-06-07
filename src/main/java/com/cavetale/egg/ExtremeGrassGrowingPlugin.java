@@ -148,7 +148,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                             Block block = world.getBlockAt(x, y, z);
                             switch (block.getType()) {
                             case GRASS_BLOCK: case DIRT:
-                                if (block.getRelative(0, 1, 0).isEmpty()) {
+                                if (remove || block.getRelative(0, 1, 0).isEmpty()) {
                                     blocks.add(Vec.v(x, y, z));
                                 }
                             default: break;
@@ -261,9 +261,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 for (int z = sel.lo.z; z <= sel.hi.z; z += 1) {
                     for (int x = sel.lo.x; x <= sel.hi.x; x += 1) {
                         Block block = world.getBlockAt(x, y, z);
-                        if (block.getType().isSolid()
-                            && block.getRelative(0, 1, 0).isEmpty()
-                            && block.getRelative(0, 2, 0).isEmpty()) {
+                        if (remove || (block.getType().isSolid()
+                                       && block.getRelative(0, 1, 0).isEmpty()
+                                       && block.getRelative(0, 2, 0).isEmpty())) {
                             blocks.add(Vec.v(x, y, z));
                         }
                     }
