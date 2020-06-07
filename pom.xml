@@ -13,19 +13,25 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <repositories>
-    <!-- Spigot Repo -->
+
+    <!-- Paper Repo -->
     <repository>
-      <id>spigot-repo</id>
-      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+      <id>papermc</id>
+      <url>https://papermc.io/repo/repository/maven-public/</url>
     </repository>
+
   </repositories>
   <dependencies>
-    <!-- Spigot-API -->
+
+    <!-- Paper API -->
     <dependency>
-      <groupId>org.spigotmc</groupId>
-      <artifactId>spigot-api</artifactId>
-      <version>1.14.4-R0.1-SNAPSHOT</version>
+      <groupId>com.destroystokyo.paper</groupId>
+      <artifactId>paper-api</artifactId>
+      <version>1.15.2-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+      <optional>true</optional>
     </dependency>
+
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -33,6 +39,7 @@
       <version>1.14.8</version>
       <scope>provided</scope>
     </dependency>
+
   </dependencies>
   <build>
     <finalName>${project.name}</finalName>

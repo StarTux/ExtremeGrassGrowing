@@ -1,5 +1,6 @@
 package com.cavetale.egg;
 
+import com.destroystokyo.paper.MaterialTags;
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -15,6 +16,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.Value;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -24,10 +27,14 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
+import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Openable;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
@@ -36,8 +43,10 @@ import org.bukkit.entity.Snowman;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
@@ -50,6 +59,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     private State state = new State();
     private static final String META_ARENA = "egg.arena";
     Random random = ThreadLocalRandom.current();
+    List<Material> flowers =
+        Stream.concat(Stream.of(Material.values())
+                      .filter(m -> Tag.FLOWERS.isTagged(m)),
+                      Stream.of(Material.GRASS, Material.TALL_GRASS))
+        .collect(Collectors.toList());
+    int growCooldown = 0;
 
     // --- Plugin Overrides
 
@@ -64,6 +79,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     @Override
     public void onDisable() {
+        saveState();
     }
 
     @Override
@@ -179,20 +195,20 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             return true;
         }
         case "clearwinners": {
-            this.state.winners.clear();
+            state.winners.clear();
             saveState();
             sender.sendMessage("Winners cleared");
             return true;
         }
         case "snow": {
-            this.state.snow = !this.state.snow;
+            state.snow = !state.snow;
             saveState();
-            sender.sendMessage("Snow is now " + (this.state.snow ? "on" : "off") + ".");
+            sender.sendMessage("Snow is now " + (state.snow ? "on" : "off") + ".");
             return true;
         }
         case "list": {
-            sender.sendMessage(this.state.placedSigns.size() + " placed signs:");
-            for (Placed placed: this.state.placedSigns) {
+            sender.sendMessage(state.placedSigns.size() + " placed signs:");
+            for (Placed placed: state.placedSigns) {
                 sender.sendMessage(placed.getOwnerName()
                                    + " " + placed.getX()
                                    + " " + placed.getY()
@@ -264,23 +280,45 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     @Override
     public void run() {
-        if (!this.state.snow) return;
-        if (this.state.gameState != GameState.GROW) return;
-        World world = Bukkit.getWorld(this.arena.world);
+        if (state.gameState != GameState.GROW) return;
+        World world = Bukkit.getWorld(arena.world);
         if (world == null) return;
-        for (Entity e: world.getEntities()) {
-            if (!(e instanceof Snowman)) continue;
-            handleSnowman((Snowman) e);
+        if (state.snow) {
+            for (Entity e: world.getEntities()) {
+                if (!(e instanceof Snowman)) continue;
+                handleSnowman((Snowman) e);
+            }
+        } else {
+            if (growCooldown > 0) {
+                growCooldown -= 1;
+                return;
+            }
+            growCooldown = 100;
+            List<Block> grassBlocks = arena.grassBlocks.stream()
+                .map(v -> world.getBlockAt(v.x, v.y, v.z))
+                .filter(b -> b.getType() == Material.GRASS_BLOCK)
+                .collect(Collectors.toList());
+            if (grassBlocks.isEmpty()) return;
+            Block grassBlock = grassBlocks.get(random.nextInt(grassBlocks.size()));
+            for (int i = 0; i < 8; i += 1) {
+                Block dirtBlock = grassBlock.getRelative(random.nextInt(2) - random.nextInt(2),
+                                                         0,
+                                                         random.nextInt(2) - random.nextInt(2));
+                if (dirtBlock.getType() != Material.DIRT) continue;
+                dirtBlock.setType(Material.GRASS_BLOCK);
+                spreadTo(dirtBlock);
+                break;
+            }
         }
     }
 
     void handleSnowman(Snowman snowman) {
         Block block = snowman.getLocation().getBlock().getRelative(0, -1, 0);
         Vec vec = Vec.v(block);
-        if (!this.arena.grassBlocks.contains(vec)) return;
+        if (!arena.grassBlocks.contains(vec)) return;
         if (block.getType() == Material.SNOW_BLOCK) return;
         block.setType(Material.SNOW_BLOCK);
-        if (purgeSign(block)) {
+        if (purgeSign(block, "snowman")) {
             Snowman snowman2 = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5),
                                                       Snowman.class);
             snowman2.setDerp(true);
@@ -291,12 +329,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         block.getRelative(0, 1, 0).setType(Material.SNOW);
     }
 
-    boolean purgeSign(Block block) {
-        for (Iterator<Placed> iter = this.state.placedSigns.iterator(); iter.hasNext();) {
+    boolean purgeSign(Block block, String destroyer) {
+        for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
             Placed placed = iter.next();
             if (placed.x == block.getX() && placed.z == block.getZ()) {
                 announceArena(ChatColor.GREEN + placed.ownerName
-                              + "'s sign was destroyed. Its message to the world:");
+                              + "'s sign was destroyed by " + destroyer + ". Its message to the world:");
                 iter.remove();
                 Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
                 BlockState blockState = signBlock.getState();
@@ -327,8 +365,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     void setupGameState(GameState gameState) {
         switch (gameState) {
         case PAUSE: {
-            if (this.state.snow) {
-                World world = Bukkit.getWorld(this.arena.world);
+            if (state.snow) {
+                World world = Bukkit.getWorld(arena.world);
                 if (world != null) {
                     for (Entity e: world.getEntities()) {
                         if (!(e instanceof Snowman)) continue;
@@ -340,7 +378,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         case PLACE: {
             for (Vec vec: arena.grassBlocks) {
                 Block block = getServer().getWorld(arena.world).getBlockAt(vec.x, vec.y, vec.z);
-                if (this.state.snow) {
+                if (state.snow) {
                     block.setType(Material.GRASS_BLOCK);
                 } else {
                     block.setType(Material.DIRT);
@@ -363,11 +401,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 }
             }
             List<Vec> blocks = new ArrayList<>(arena.grassBlocks);
+            World world = getServer().getWorld(arena.world);
             if (blocks.size() > 0) {
                 int count = 0;
                 for (int i = 0; i < 10; i += 1) {
                     Vec vec = blocks.get(random.nextInt(blocks.size()));
-                    Block block = getServer().getWorld(arena.world).getBlockAt(vec.x, vec.y, vec.z);
+                    Block block = world.getBlockAt(vec.x, vec.y, vec.z);
                     boolean conflicts = false;
                     for (Placed placed: state.placedSigns) {
                         if (placed.x == vec.x && placed.z == vec.z) {
@@ -376,10 +415,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                         }
                     }
                     if (!conflicts) {
-                        if (this.state.snow) {
+                        if (state.snow) {
                             if (count == 0) {
                                 Location loc = block.getLocation().add(0.5, 1.0, 0.5);
-                                Snowman snowman = block.getWorld().spawn(loc, Snowman.class);
+                                Snowman snowman = world.spawn(loc, Snowman.class);
                                 snowman.setDerp(true);
                                 PotionEffect effect;
                                 effect = new PotionEffect(PotionEffectType.SPEED,
@@ -390,6 +429,20 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                             block.setType(Material.GRASS_BLOCK);
                         }
                         count += 1;
+                    }
+                }
+            }
+            for (int y = arena.area.lo.y; y <= arena.area.hi.y; y += 1) {
+                for (int z = arena.area.lo.z; z <= arena.area.hi.z; z += 1) {
+                    for (int x = arena.area.lo.x; x <= arena.area.hi.x; x += 1) {
+                        Block block = world.getBlockAt(x, y, z);
+                        if (MaterialTags.FENCE_GATES.isTagged(block.getType())) {
+                            Openable openable = (Openable) block.getBlockData();
+                            if (openable.isOpen()) {
+                                openable.setOpen(false);
+                                block.setBlockData(openable, false);
+                            }
+                        }
                     }
                 }
             }
@@ -637,7 +690,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     @EventHandler
     public void onBlockSpread(BlockSpreadEvent event) {
-        if (this.state.snow) return;
+        if (state.snow) return;
         Block block = event.getBlock();
         if (!block.getWorld().getName().equals(arena.world)) return;
         if (event.getSource().getType() != Material.GRASS_BLOCK
@@ -647,9 +700,23 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             event.setCancelled(true);
             return;
         }
-        boolean removed = purgeSign(block);
-        if (removed) saveState();
-        block.getRelative(0, 1, 0).setType(Material.GRASS);
+        spreadTo(block);
+    }
+
+    void spreadTo(Block block) {
+        Material flower = flowers.get(random.nextInt(flowers.size()));
+        boolean removed = purgeSign(block, flower.name().toLowerCase());
+        if (removed) {
+            growCooldown = 200;
+            saveState();
+        }
+        BlockData flowerData = flower.createBlockData();
+        block.getRelative(0, 1, 0).setBlockData(flowerData, false);
+        if (flowerData instanceof Bisected) {
+            Bisected bisected = (Bisected) flowerData;
+            bisected.setHalf(Bisected.Half.TOP);
+            block.getRelative(0, 2, 0).setBlockData(bisected, false);
+        }
         block.getWorld().playSound(block.getLocation(),
                                    Sound.BLOCK_GRASS_BREAK,
                                    SoundCategory.MASTER,
@@ -663,8 +730,23 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (removed) checkForWinner();
     }
 
+    @EventHandler
+    void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getPlayer().isOp()) return;
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        if (!(event.hasBlock())) return;
+        if (state.gameState != GameState.GROW) return;
+        Block block = event.getClickedBlock();
+        if (!block.getWorld().getName().equals(arena.world)) return;
+        if (!isInArena(block)) return;
+        Material mat = block.getType();
+        if (Tag.DOORS.isTagged(mat) || MaterialTags.FENCE_GATES.isTagged(mat)) {
+            event.setCancelled(true);
+        }
+    }
+
     void checkForWinner() {
-        if (this.state.placedSigns.size() == 1) {
+        if (state.placedSigns.size() == 1) {
             announceArena(ChatColor.GREEN + state.placedSigns.get(0).ownerName + " wins the game!");
             state.winners.add(state.placedSigns.get(0).ownerName);
             setupGameState(GameState.PAUSE);
