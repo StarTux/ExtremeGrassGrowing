@@ -64,7 +64,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                       .filter(m -> Tag.FLOWERS.isTagged(m)),
                       Stream.of(Material.GRASS, Material.TALL_GRASS))
         .collect(Collectors.toList());
-    int growCooldown = 0;
+    int growCooldown = 50;
 
     // --- Plugin Overrides
 
@@ -297,7 +297,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 growCooldown -= 1;
                 return;
             }
-            growCooldown = 100;
             List<Block> grassBlocks = arena.grassBlocks.stream()
                 .map(v -> world.getBlockAt(v.x, v.y, v.z))
                 .filter(b -> b.getType() == Material.GRASS_BLOCK)
@@ -312,6 +311,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 if (!arena.grassBlocks.contains(new Vec(dirtBlock.getX(), dirtBlock.getY(), dirtBlock.getZ()))) continue;
                 dirtBlock.setType(Material.GRASS_BLOCK);
                 spreadTo(dirtBlock);
+                growCooldown = 60;
                 break;
             }
         }
