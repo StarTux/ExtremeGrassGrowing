@@ -311,7 +311,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 if (!arena.grassBlocks.contains(new Vec(dirtBlock.getX(), dirtBlock.getY(), dirtBlock.getZ()))) continue;
                 dirtBlock.setType(Material.GRASS_BLOCK);
                 spreadTo(dirtBlock);
-                growCooldown = 60;
+                growCooldown = 30;
                 break;
             }
         }
