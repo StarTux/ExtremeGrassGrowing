@@ -309,6 +309,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                                          0,
                                                          random.nextInt(2) - random.nextInt(2));
                 if (dirtBlock.getType() != Material.DIRT) continue;
+                if (!arena.grassBlocks.contains(new Vec(dirtBlock.getX(), dirtBlock.getY(), dirtBlock.getZ()))) continue;
                 dirtBlock.setType(Material.GRASS_BLOCK);
                 spreadTo(dirtBlock);
                 break;
