@@ -379,6 +379,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     }
                 }
             }
+            break;
         }
         case PLACE: {
             for (Vec vec: arena.grassBlocks) {
