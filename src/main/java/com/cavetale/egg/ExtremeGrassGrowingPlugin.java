@@ -649,7 +649,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     Material.DARK_OAK_SIGN,
                     Material.JUNGLE_SIGN,
                     Material.OAK_SIGN,
-                    Material.SPRUCE_SIGN);
+                    Material.SPRUCE_SIGN,
+                    Material.CRIMSON_SIGN,
+                    Material.WARPED_SIGN);
         return mats.get(random.nextInt(mats.size()));
     }
 
