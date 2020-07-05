@@ -68,6 +68,15 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                 Material.CRIMSON_FUNGUS,
                                 Material.WARPED_FUNGUS))
         .collect(Collectors.toList());
+    List<Material> signs = Arrays
+        .asList(Material.ACACIA_SIGN,
+                Material.BIRCH_SIGN,
+                Material.DARK_OAK_SIGN,
+                Material.JUNGLE_SIGN,
+                Material.OAK_SIGN,
+                Material.SPRUCE_SIGN,
+                Material.CRIMSON_SIGN,
+                Material.WARPED_SIGN);
     int growCooldown = 50;
 
     // --- Plugin Overrides
@@ -643,30 +652,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     }
 
     Material randomSign() {
-        List<Material> mats = Arrays
-            .asList(Material.ACACIA_SIGN,
-                    Material.BIRCH_SIGN,
-                    Material.DARK_OAK_SIGN,
-                    Material.JUNGLE_SIGN,
-                    Material.OAK_SIGN,
-                    Material.SPRUCE_SIGN,
-                    Material.CRIMSON_SIGN,
-                    Material.WARPED_SIGN);
-        return mats.get(random.nextInt(mats.size()));
+        return signs.get(random.nextInt(signs.size()));
     }
 
     boolean isSign(Material mat) {
-        switch (mat) {
-        case ACACIA_SIGN:
-        case BIRCH_SIGN:
-        case DARK_OAK_SIGN:
-        case JUNGLE_SIGN:
-        case OAK_SIGN:
-        case SPRUCE_SIGN:
-            return true;
-        default:
-            return false;
-        }
+        return signs.contains(mat);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
