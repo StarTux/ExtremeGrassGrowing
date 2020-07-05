@@ -62,7 +62,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     List<Material> flowers =
         Stream.concat(Stream.of(Material.values())
                       .filter(m -> Tag.FLOWERS.isTagged(m)),
-                      Stream.of(Material.GRASS, Material.TALL_GRASS))
+                      Stream.of(Material.GRASS, Material.TALL_GRASS,
+                                Material.BROWN_MUSHROOM,
+                                Material.RED_MUSHROOM,
+                                Material.CRIMSON_FUNGUS,
+                                Material.WARPED_FUNGUS))
         .collect(Collectors.toList());
     int growCooldown = 50;
 
