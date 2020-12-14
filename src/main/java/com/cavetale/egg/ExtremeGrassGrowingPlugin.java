@@ -1,5 +1,7 @@
 package com.cavetale.egg;
 
+import com.cavetale.sidebar.PlayerSidebarEvent;
+import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.MaterialTags;
 import com.google.gson.Gson;
 import java.io.File;
@@ -29,6 +31,7 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.Tag;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Sign;
@@ -78,6 +81,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 Material.CRIMSON_SIGN,
                 Material.WARPED_SIGN);
     int growCooldown = 50;
+    private List<Snowman> snowmen = new ArrayList<>();
 
     // --- Plugin Overrides
 
@@ -96,8 +100,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command,
-                             String alias, String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String alias, String[] args) {
         if (!(sender instanceof Player)) return false;
         Player player = (Player) sender;
         warpPlayerOutside(player);
@@ -249,6 +252,25 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             sender.sendMessage("Highlighting blocks");
             return true;
         }
+        case "info": {
+            Gson gson = new Gson();
+            sender.sendMessage(gson.toJson(state));
+        }
+        case "debug": {
+            state.debug = !state.debug;
+            sender.sendMessage("debug mode: " + state.debug);
+            return true;
+        }
+        case "title": {
+            state.winnerTitle = args[1];
+            sender.sendMessage("winner title: " + state.winnerTitle);
+            return true;
+        }
+        case "snowman": {
+            spawnSnowman(player.getLocation());
+            player.sendMessage("snowman spawned");
+            return true;
+        }
         default: return false;
         }
     }
@@ -301,9 +323,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         World world = Bukkit.getWorld(arena.world);
         if (world == null) return;
         if (state.snow) {
-            for (Entity e: world.getEntities()) {
+            for (Entity e : world.getEntities()) {
                 if (!(e instanceof Snowman)) continue;
-                handleSnowman((Snowman) e);
+                Snowman snowman = (Snowman) e;
+                if (!snowman.isValid()) {
+                    snowmen.remove(snowman);
+                    continue;
+                }
+                handleSnowman(snowman);
             }
         } else {
             if (growCooldown > 0) {
@@ -330,18 +357,27 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         }
     }
 
+    Snowman spawnSnowman(Location location) {
+        Snowman snowman = location.getWorld().spawn(location, Snowman.class, s -> {
+                s.setDerp(true);
+            });
+        snowmen.add(snowman);
+        snowman.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.6);
+        return snowman;
+    }
+
     void handleSnowman(Snowman snowman) {
         Block block = snowman.getLocation().getBlock().getRelative(0, -1, 0);
         Vec vec = Vec.v(block);
         if (!arena.grassBlocks.contains(vec)) return;
         if (block.getType() == Material.SNOW_BLOCK) return;
+        if (!snowmen.contains(snowman)) snowmen.add(snowman);
         block.setType(Material.SNOW_BLOCK);
         if (purgeSign(block, "snowman")) {
-            Snowman snowman2 = block.getWorld().spawn(block.getLocation().add(0.5, 1.0, 0.5),
-                                                      Snowman.class);
-            snowman2.setDerp(true);
-            snowman2.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
-                                                      9999, 5, true, false));
+            spawnSnowman(block.getLocation().add(0.5, 1.0, 0.5));
+            for (Snowman other : snowmen) {
+                other.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 9, true, false));
+            }
             checkForWinner();
         }
         block.getRelative(0, 1, 0).setType(Material.SNOW);
@@ -352,7 +388,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             Placed placed = iter.next();
             if (placed.x == block.getX() && placed.z == block.getZ()) {
                 announceArena(ChatColor.GREEN + placed.ownerName
-                              + "'s sign was destroyed by " + destroyer + ". Its message to the world:");
+                              + " was destroyed by " + destroyer + ":");
                 iter.remove();
                 Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
                 BlockState blockState = signBlock.getState();
@@ -386,10 +422,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             if (state.snow) {
                 World world = Bukkit.getWorld(arena.world);
                 if (world != null) {
-                    for (Entity e: world.getEntities()) {
-                        if (!(e instanceof Snowman)) continue;
-                        if (isInArena(e)) e.remove();
+                    for (Snowman snowman : snowmen) {
+                        snowman.remove();
                     }
+                    snowmen.clear();
                 }
             }
             break;
@@ -439,12 +475,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                         if (state.snow) {
                             if (count == 0) {
                                 Location loc = block.getLocation().add(0.5, 1.0, 0.5);
-                                Snowman snowman = world.spawn(loc, Snowman.class);
-                                snowman.setDerp(true);
-                                PotionEffect effect;
-                                effect = new PotionEffect(PotionEffectType.SPEED,
-                                                          9999, 5, true, false);
-                                snowman.addPotionEffect(effect);
+                                Snowman snowman = spawnSnowman(loc);
                             }
                         } else {
                             block.setType(Material.GRASS_BLOCK);
@@ -532,6 +563,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         List<Placed> placedSigns = new ArrayList<>();
         List<String> winners = new ArrayList<>();
         boolean snow = false;
+        String winnerTitle = "Snowman";
+        boolean debug = false;
     }
 
     void loadArena() {
@@ -685,6 +718,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             saveState();
             event.setCancelled(false);
             player.sendMessage(ChatColor.GREEN + "Sign placed.");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
         } else {
             if (!player.isOp()) {
                 event.setCancelled(true);
@@ -750,9 +784,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     }
 
     void checkForWinner() {
+        if (state.debug) return;
         if (state.placedSigns.size() == 1) {
-            announceArena(ChatColor.GREEN + state.placedSigns.get(0).ownerName + " wins the game!");
-            state.winners.add(state.placedSigns.get(0).ownerName);
+            Placed winner = state.placedSigns.get(0);
+            announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
+            state.winners.add(winner.ownerName);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " " + state.winnerTitle);
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " christmas_token");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
             setupGameState(GameState.PAUSE);
         }
     }
@@ -763,5 +802,25 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 player.sendMessage(msg);
             }
         }
+    }
+
+    @EventHandler
+    void onPlayerSidebar(PlayerSidebarEvent event) {
+        if (state.gameState != GameState.GROW) return;
+        Player player = event.getPlayer();
+        if (!isInArena(player)) return;
+        List<String> ls = new ArrayList<>();
+        int left = state.placedSigns.size();
+        ls.add(ChatColor.GREEN + "Signs Left " + ChatColor.WHITE + left);
+        String all = state.placedSigns.stream()
+            .map(s -> s.ownerName)
+            .sorted()
+            .collect(Collectors.joining(" "));
+        List<String> alls = Text.wrap(all, 30);
+        if (alls.size() > 3) {
+            alls = alls.subList(0, 3);
+        }
+        ls.addAll(alls);
+        event.addLines(this, Priority.HIGH, ls);
     }
 }
