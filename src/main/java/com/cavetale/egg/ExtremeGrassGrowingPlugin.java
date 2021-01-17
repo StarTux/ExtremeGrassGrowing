@@ -11,9 +11,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -40,6 +43,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Openable;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Snowman;
@@ -82,6 +86,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 Material.WARPED_SIGN);
     int growCooldown = 50;
     private List<Snowman> snowmen = new ArrayList<>();
+    private Map<Vec, ArmorStand> armorStands = new HashMap<>();
 
     // --- Plugin Overrides
 
@@ -97,6 +102,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     @Override
     public void onDisable() {
         saveState();
+        cleanUp();
     }
 
     @Override
@@ -105,6 +111,31 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         Player player = (Player) sender;
         warpPlayerOutside(player);
         return true;
+    }
+
+    void cleanUp() {
+        for (ArmorStand as : armorStands.values()) {
+            as.remove();
+        }
+        armorStands.clear();
+    }
+
+    void updateArmorStands(World w) {
+        for (Placed placed : state.placedSigns) {
+            Vec vec = Vec.v(placed.x, placed.y, placed.z);
+            ArmorStand armorStand = armorStands.get(vec);
+            if (armorStand == null || !armorStand.isValid()) {
+                armorStand = w.spawn(vec.toBlock(w).getLocation().add(0.5, 1.0, 0.5), ArmorStand.class, as -> {
+                        as.setPersistent(false);
+                        as.setCustomName(ChatColor.GRAY + placed.ownerName);
+                        as.setCustomNameVisible(true);
+                        as.setInvisible(true);
+                        as.setGravity(false);
+                        as.setMarker(true);
+                    });
+            }
+            armorStands.put(vec, armorStand);
+        }
     }
 
     void warpPlayerOutside(Player player) {
@@ -210,6 +241,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     return true;
                 }
                 setupGameState(newState);
+                cleanUp();
                 sender.sendMessage("Switched to state " + newState);
             }
             return true;
@@ -321,6 +353,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     public void run() {
         if (state.gameState != GameState.GROW) return;
         World world = Bukkit.getWorld(arena.world);
+        updateArmorStands(world);
         if (world == null) return;
         if (state.snow) {
             for (Entity e : world.getEntities()) {
@@ -333,26 +366,54 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 handleSnowman(snowman);
             }
         } else {
-            if (growCooldown > 0) {
-                growCooldown -= 1;
+            if (growCooldown == 0) {
+                if (!state.spreadOptions.isEmpty()) {
+                    Collections.shuffle(state.spreadOptions);
+                    Vec vec = state.spreadOptions.get(0);
+                    Block dirtBlock = vec.toBlock(world);
+                    state.spreadOptions.clear();
+                    spreadTo(dirtBlock);
+                    dirtBlock.setType(Material.GRASS_BLOCK);
+                }
+                if (growCooldown < 80) growCooldown = 80; // spreadTo can update it
                 return;
             }
-            List<Block> grassBlocks = arena.grassBlocks.stream()
-                .map(v -> world.getBlockAt(v.x, v.y, v.z))
-                .filter(b -> b.getType() == Material.GRASS_BLOCK)
-                .collect(Collectors.toList());
-            if (grassBlocks.isEmpty()) return;
-            Block grassBlock = grassBlocks.get(random.nextInt(grassBlocks.size()));
-            for (int i = 0; i < 8; i += 1) {
-                Block dirtBlock = grassBlock.getRelative(random.nextInt(2) - random.nextInt(2),
-                                                         0,
-                                                         random.nextInt(2) - random.nextInt(2));
-                if (dirtBlock.getType() != Material.DIRT) continue;
-                if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
-                dirtBlock.setType(Material.GRASS_BLOCK);
-                growCooldown = 30;
-                spreadTo(dirtBlock);
-                break;
+            growCooldown -= 1;
+            if (state.spreadOptions.isEmpty()) {
+                state.signOption = false;
+                List<Block> grassBlocks = arena.grassBlocks.stream()
+                    .map(v -> world.getBlockAt(v.x, v.y, v.z))
+                    .filter(b -> b.getType() == Material.GRASS_BLOCK)
+                    .collect(Collectors.toList());
+                if (grassBlocks.isEmpty()) return;
+                Block grassBlock = grassBlocks.get(random.nextInt(grassBlocks.size()));
+                for (int dx = -1; dx <= 1; dx += 1) {
+                    for (int dz = -1; dz <= 1; dz += 1) {
+                        Block dirtBlock = grassBlock.getRelative(dx, 0, dz);
+                        if (dirtBlock.getType() != Material.DIRT) continue;
+                        if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
+                        Vec vec = Vec.v(dirtBlock);
+                        if (!state.spreadOptions.contains(vec)) {
+                            state.spreadOptions.add(vec);
+                            for (Placed placed : state.placedSigns) {
+                                if (placed.x == vec.x && placed.z == vec.z) {
+                                    state.signOption = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (growCooldown < 80 && growCooldown > 10 && !state.spreadOptions.isEmpty() && !state.signOption) {
+                growCooldown = 10;
+            }
+            if (growCooldown < 60 && !state.spreadOptions.isEmpty()) {
+                for (Vec vec : state.spreadOptions) {
+                    Block b = vec.toBlock(world);
+                    world.spawnParticle(Particle.BLOCK_DUST, b.getLocation().add(0.5, 1.5, 0.5),
+                                        1, 0.125, 0.125, 0.125, 0,
+                                        Material.GRASS.createBlockData());
+                }
             }
         }
     }
@@ -410,6 +471,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                     8,
                                     0.2, 0.2, 0.2,
                                     0.0);
+                Vec vec = Vec.v(placed.x, placed.y, placed.z);
+                ArmorStand armorStand = armorStands.remove(vec);
+                if (armorStand != null) armorStand.remove();
                 return true;
             }
         }
@@ -522,6 +586,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         static Vec v(Block block) {
             return new Vec(block.getX(), block.getY(), block.getZ());
         }
+        Block toBlock(World w) {
+            return w.getBlockAt(x, y, z);
+        }
     }
 
     @Value
@@ -565,6 +632,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         boolean snow = false;
         String winnerTitle = "Snowman";
         boolean debug = false;
+        List<Vec> spreadOptions = new ArrayList<>();
+        boolean signOption = false;
     }
 
     void loadArena() {
@@ -786,6 +855,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     void checkForWinner() {
         if (state.debug) return;
         if (state.placedSigns.size() == 1) {
+            cleanUp();
             Placed winner = state.placedSigns.get(0);
             announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
             state.winners.add(winner.ownerName);
