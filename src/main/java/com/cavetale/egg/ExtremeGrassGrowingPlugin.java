@@ -70,8 +70,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         Stream.concat(Stream.of(Material.values())
                       .filter(m -> Tag.FLOWERS.isTagged(m)),
                       Stream.of(Material.GRASS, Material.TALL_GRASS,
-                                Material.BROWN_MUSHROOM,
-                                Material.RED_MUSHROOM,
+                                // Material.BROWN_MUSHROOM,
+                                // Material.RED_MUSHROOM,
                                 Material.CRIMSON_FUNGUS,
                                 Material.WARPED_FUNGUS))
         .collect(Collectors.toList());
@@ -291,11 +291,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         case "debug": {
             state.debug = !state.debug;
             sender.sendMessage("debug mode: " + state.debug);
-            return true;
-        }
-        case "title": {
-            state.winnerTitle = args[1];
-            sender.sendMessage("winner title: " + state.winnerTitle);
             return true;
         }
         case "snowman": {
@@ -630,7 +625,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         List<Placed> placedSigns = new ArrayList<>();
         List<String> winners = new ArrayList<>();
         boolean snow = false;
-        String winnerTitle = "Snowman";
         boolean debug = false;
         List<Vec> spreadOptions = new ArrayList<>();
         boolean signOption = false;
@@ -837,18 +831,23 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (removed) checkForWinner();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getPlayer().isOp()) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (!(event.hasBlock())) return;
-        if (state.gameState != GameState.GROW) return;
         Block block = event.getClickedBlock();
         if (!block.getWorld().getName().equals(arena.world)) return;
         if (!isInArena(block)) return;
-        Material mat = block.getType();
-        if (Tag.DOORS.isTagged(mat) || MaterialTags.FENCE_GATES.isTagged(mat)) {
-            event.setCancelled(true);
+        if (state.gameState == GameState.GROW) {
+            Material mat = block.getType();
+            if (Tag.DOORS.isTagged(mat) || MaterialTags.FENCE_GATES.isTagged(mat)) {
+                event.setCancelled(true);
+            }
+        } else if (state.gameState == GameState.PLACE) {
+            if (arena.grassBlocks.contains(Vec.v(block))) {
+                event.setCancelled(false);
+            }
         }
     }
 
@@ -859,8 +858,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             Placed winner = state.placedSigns.get(0);
             announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
             state.winners.add(winner.ownerName);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " " + state.winnerTitle);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " christmas_token");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " GrassGrower EGGspert Bee BumbleBee");
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
             setupGameState(GameState.PAUSE);
         }
