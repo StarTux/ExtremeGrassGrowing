@@ -26,7 +26,6 @@ import java.util.stream.Stream;
 import lombok.Value;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -721,16 +720,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                    new FixedMetadataValue(this, true));
             }
             switch (state.gameState) {
-            case PAUSE: {
-                player.setGameMode(GameMode.ADVENTURE);
-                break;
-            }
-            case PLACE: {
-                player.setGameMode(GameMode.SURVIVAL);
-                break;
-            }
+            case PAUSE: break;
+            case PLACE: break;
             case GROW: {
-                player.setGameMode(GameMode.ADVENTURE);
                 Block block = player.getLocation().getBlock().getRelative(0, -1, 0);
                 if (arena.grassBlocks.contains(Vec.v(block))) {
                     warpPlayerOutside(player);
@@ -742,7 +734,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         } else {
             if (player.hasMetadata(META_ARENA)) {
                 player.removeMetadata(META_ARENA, this);
-                player.setGameMode(GameMode.ADVENTURE);
             }
         }
     }
