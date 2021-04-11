@@ -516,11 +516,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 }
             }
             List<Vec> blocks = new ArrayList<>(arena.grassBlocks);
+            Collections.shuffle(blocks);
             World world = getServer().getWorld(arena.world);
             if (blocks.size() > 0) {
                 int count = 0;
-                for (int i = 0; i < 10; i += 1) {
-                    Vec vec = blocks.get(random.nextInt(blocks.size()));
+                for (int i = 0; i < 100; i += 1) {
+                    Vec vec = blocks.get(i % blocks.size());
                     Block block = world.getBlockAt(vec.x, vec.y, vec.z);
                     boolean conflicts = false;
                     for (Placed placed: state.placedSigns) {
@@ -540,6 +541,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                         }
                         count += 1;
                     }
+                    if (count >= 1) break;
                 }
             }
             for (int y = arena.area.lo.y; y <= arena.area.hi.y; y += 1) {
