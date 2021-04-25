@@ -184,7 +184,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 default: return false;
                 }
             }
-            Cuboid sel = getSelection(player);
+            Cuboid sel = WorldEdit.getSelection(player);
             if (sel != null) {
                 World world = player.getWorld();
                 Set<Vec> blocks = new HashSet<>();
@@ -219,7 +219,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 sender.sendMessage("Player expected.");
                 return true;
             }
-            Cuboid selection = getSelection(player);
+            Cuboid selection = WorldEdit.getSelection(player);
             if (selection != null) {
                 arena.area = selection;
                 arena.world = player.getWorld().getName();
@@ -314,7 +314,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             default: return false;
             }
         }
-        Cuboid sel = getSelection(player);
+        Cuboid sel = WorldEdit.getSelection(player);
         if (sel != null) {
             World world = player.getWorld();
             Set<Vec> blocks = new HashSet<>();
@@ -567,38 +567,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         saveState();
     }
 
-    // --- JSON Structures
-
-    @Value
-    static class Vec {
-        static final Vec ZERO = new Vec(0, 0, 0);
-        private final int x;
-        private final int y;
-        private final int z;
-
-        static Vec v(int x, int y, int z) {
-            return new Vec(x, y, z);
-        }
-        static Vec v(Block block) {
-            return new Vec(block.getX(), block.getY(), block.getZ());
-        }
-        Block toBlock(World w) {
-            return w.getBlockAt(x, y, z);
-        }
-    }
-
-    @Value
-    static class Cuboid {
-        static final Cuboid ZERO = new Cuboid(Vec.ZERO, Vec.ZERO);
-        private final Vec lo;
-        private final Vec hi;
-        boolean contains(int x, int y, int z) {
-            return x >= lo.x && x <= hi.x
-                && y >= lo.y && y <= hi.y
-                && z >= lo.z && z <= hi.z;
-        }
-    }
-
     static class Arena {
         String world = "world";
         Cuboid area = Cuboid.ZERO;
@@ -639,6 +607,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
+        if (arena == null) arena = new Arena();
     }
 
     void loadState() {
@@ -676,31 +645,6 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             ioe.printStackTrace();
         }
     }
-
-    // --- Selection Utility
-
-    private Cuboid getSelection(Player player) {
-        int ax;
-        int ay;
-        int az;
-        int bx;
-        int by;
-        int bz;
-        try {
-            ax = player.getMetadata("SelectionAX").get(0).asInt();
-            ay = player.getMetadata("SelectionAY").get(0).asInt();
-            az = player.getMetadata("SelectionAZ").get(0).asInt();
-            bx = player.getMetadata("SelectionBX").get(0).asInt();
-            by = player.getMetadata("SelectionBY").get(0).asInt();
-            bz = player.getMetadata("SelectionBZ").get(0).asInt();
-        } catch (Exception e) {
-            return null;
-        }
-        return new Cuboid(Vec.v(Math.min(ax, bx), Math.min(ay, by), Math.min(az, bz)),
-                          Vec.v(Math.max(ax, bx), Math.max(ay, by), Math.max(az, bz)));
-    }
-
-    // --- Event Handlers
 
     boolean isInArena(Entity entity) {
         Location loc = entity.getLocation();
