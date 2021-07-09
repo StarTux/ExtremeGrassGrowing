@@ -1,9 +1,12 @@
 package com.cavetale.egg;
 
+import com.cavetale.core.event.block.PlayerBreakBlockEvent;
+import com.cavetale.core.font.VanillaItems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.MaterialTags;
 import com.google.gson.Gson;
+import com.winthier.generic_events.PlayerCanBuildEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -24,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -50,8 +54,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
@@ -449,10 +455,13 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 BlockState blockState = signBlock.getState();
                 if (blockState instanceof Sign) {
                     Sign sign = (Sign) blockState;
-                    for (String line: sign.getLines()) {
-                        if (line != null) {
-                            announceArena(ChatColor.GREEN + "> " + ChatColor.WHITE + line);
-                        }
+                    for (Component line: sign.lines()) {
+                        if (line == null) continue;
+                        announceArena(Component.text()
+                                      .append(VanillaItems.componentOf(Material.OAK_SIGN))
+                                      .append(Component.space())
+                                      .append(line)
+                                      .build());
                     }
                 }
                 World world = block.getWorld();
@@ -581,6 +590,23 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         private final int x;
         private final int y;
         private final int z;
+
+        public boolean isOwner(Player player) {
+            return player.getUniqueId().equals(owner);
+        }
+    }
+
+    private Placed findPlacedSign(Block block) {
+        return findPlacedSign(block.getX(), block.getY(), block.getZ());
+    }
+
+    private Placed findPlacedSign(int x, int y, int z) {
+        for (Placed placed : state.placedSigns) {
+            if (x == placed.x && y == placed.y && z == placed.z) {
+                return placed;
+            }
+        }
+        return null;
     }
 
     enum GameState {
@@ -770,7 +796,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
 
     @EventHandler(priority = EventPriority.HIGHEST)
     void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getPlayer().isOp()) return;
+        Player player = event.getPlayer();
+        if (player.isOp()) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (!(event.hasBlock())) return;
         Block block = event.getClickedBlock();
@@ -784,6 +811,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         } else if (state.gameState == GameState.PLACE) {
             if (arena.grassBlocks.contains(Vec.v(block))) {
                 event.setCancelled(false);
+            } else {
+                Placed placed = findPlacedSign(block);
+                if (placed != null && player.getUniqueId().equals(placed.owner)) {
+                    event.setCancelled(false);
+                }
             }
         }
     }
@@ -809,6 +841,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         }
     }
 
+    void announceArena(Component msg) {
+        for (Player player: getServer().getWorld(arena.world).getPlayers()) {
+            if (isInArena(player)) {
+                player.sendMessage(msg);
+            }
+        }
+    }
+
     @EventHandler
     void onPlayerSidebar(PlayerSidebarEvent event) {
         if (state.gameState != GameState.GROW) return;
@@ -827,5 +867,77 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         }
         ls.addAll(alls);
         event.addLines(this, Priority.HIGH, ls);
+    }
+
+    /**
+     * Uncancel build permissions for your own sign.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    void onPlayerCanBuild(PlayerCanBuildEvent event) {
+        if (!event.isCancelled()) return;
+        if (state.gameState != GameState.PLACE) return;
+        Block block = event.getBlock();
+        if (!isInArena(block)) return;
+        Placed placed = findPlacedSign(block);
+        if (placed == null) return;
+        Player player = event.getPlayer();
+        if (!placed.isOwner(player) && !player.isOp()) return;
+        event.setCancelled(false);
+    }
+
+    /**
+     * Uncancel sign change event.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    void onSignChange(SignChangeEvent event) {
+        if (!event.isCancelled()) return;
+        if (state.gameState != GameState.PLACE) return;
+        Block block = event.getBlock();
+        if (!isInArena(block)) return;
+        Placed placed = findPlacedSign(block);
+        if (placed == null) return;
+        Player player = event.getPlayer();
+        if (!placed.isOwner(player) && !player.isOp()) return;
+        event.setCancelled(false);
+    }
+
+    /**
+     * Remove sign broken by owner.
+     * Uncancel build permissions.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    void onBlockBreak(BlockBreakEvent event) {
+        if (state.gameState != GameState.PLACE) return;
+        Block block = event.getBlock();
+        if (!isInArena(block)) return;
+        Placed placed = findPlacedSign(block);
+        if (placed == null) return;
+        Player player = event.getPlayer();
+        if (!placed.isOwner(player) && !player.isOp()) {
+            event.setCancelled(true);
+            return;
+        }
+        event.setCancelled(false);
+        state.placedSigns.remove(placed);
+    }
+
+    /**
+     * Remove sign broken by owner.
+     * Uncancel build permissions.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    void onPlayerBreakBlock(PlayerBreakBlockEvent event) {
+        if (state.gameState != GameState.PLACE) return;
+        Block block = event.getBlock();
+        if (!isInArena(block)) return;
+        Placed placed = findPlacedSign(block);
+        if (placed == null) return;
+        Player player = event.getPlayer();
+        if (!placed.isOwner(player) && !player.isOp()) {
+            event.setCancelled(true);
+            return;
+        }
+        event.setCancelled(false);
+        state.placedSigns.remove(placed);
     }
 }
