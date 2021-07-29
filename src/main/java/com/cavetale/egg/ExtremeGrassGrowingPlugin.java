@@ -1,12 +1,12 @@
 package com.cavetale.egg;
 
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
+import com.cavetale.core.event.block.PlayerCanBuildEvent;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.MaterialTags;
 import com.google.gson.Gson;
-import com.winthier.generic_events.PlayerCanBuildEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
