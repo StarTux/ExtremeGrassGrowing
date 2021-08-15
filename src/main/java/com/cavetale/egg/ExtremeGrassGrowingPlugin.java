@@ -827,7 +827,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             Placed winner = state.placedSigns.get(0);
             announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
             state.winners.add(winner.ownerName);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " GrassGrower EGGspert Bee BuzzBee BumbleBee");
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " GrassGrower EGGspert Bee BuzzBee Bumblebee");
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
             setupGameState(GameState.PAUSE);
         }
