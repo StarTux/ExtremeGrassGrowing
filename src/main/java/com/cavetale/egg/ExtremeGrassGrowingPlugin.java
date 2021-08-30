@@ -1,7 +1,7 @@
 package com.cavetale.egg;
 
+import com.cavetale.core.event.block.PlayerBlockAbilityQuery;;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
-import com.cavetale.core.event.block.PlayerCanBuildEvent;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
@@ -873,16 +873,20 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
      * Uncancel build permissions for your own sign.
      */
     @EventHandler(priority = EventPriority.HIGHEST)
-    void onPlayerCanBuild(PlayerCanBuildEvent event) {
-        if (!event.isCancelled()) return;
+    void onPlayerBlockAbility(PlayerBlockAbilityQuery query) {
+        switch (query.getAction()) {
+        case BUILD: break;
+        default: return;
+        }
+        if (!query.isCancelled()) return;
         if (state.gameState != GameState.PLACE) return;
-        Block block = event.getBlock();
+        Block block = query.getBlock();
         if (!isInArena(block)) return;
         Placed placed = findPlacedSign(block);
         if (placed == null) return;
-        Player player = event.getPlayer();
+        Player player = query.getPlayer();
         if (!placed.isOwner(player) && !player.isOp()) return;
-        event.setCancelled(false);
+        query.setCancelled(false);
     }
 
     /**
