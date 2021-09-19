@@ -492,7 +492,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         ArmorStand armorStand = armorStands.remove(vec);
         if (armorStand != null) armorStand.remove();
         if (explodeGrass && !state.snow) {
-            final int explodeRadius = 2;
+            final int explodeRadius = 3;
             final double explodeDistance = (double) explodeRadius + 0.5;
             for (int dz = -explodeRadius; dz <= explodeRadius; dz += 1) {
                 for (int dx = -explodeRadius; dx <= explodeRadius; dx += 1) {
