@@ -502,7 +502,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     Vec vec2 = Vec.v(block.getX() + dx, block.getY(), block.getZ() + dz);
                     if (!arena.grassBlocks.contains(vec2)) continue;
                     Block block2 = block.getRelative(dx, 0, dz);
-                    if (block2.getType() == Material.GRASS) {
+                    if (block2.getType() == Material.GRASS_BLOCK) {
                         block2.setType(Material.DIRT);
                     }
                 }
