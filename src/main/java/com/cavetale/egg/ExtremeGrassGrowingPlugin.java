@@ -456,7 +456,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         Placed placed = null;
         for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
             Placed it = iter.next();
-            if (placed.x == block.getX() && placed.z == block.getZ()) {
+            if (it.x == block.getX() && it.z == block.getZ()) {
                 placed = it;
                 iter.remove();
                 break;
