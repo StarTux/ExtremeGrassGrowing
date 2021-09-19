@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Value;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -70,8 +71,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
     private Arena arena = new Arena();
     private State state = new State();
     private static final String META_ARENA = "egg.arena";
-    Random random = ThreadLocalRandom.current();
-    List<Material> flowers =
+    protected Random random = ThreadLocalRandom.current();
+    protected List<Material> flowers =
         Stream.concat(Stream.of(Material.values())
                       .filter(m -> Tag.FLOWERS.isTagged(m)),
                       Stream.of(Material.GRASS, Material.TALL_GRASS,
@@ -80,7 +81,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                                 Material.CRIMSON_FUNGUS,
                                 Material.WARPED_FUNGUS))
         .collect(Collectors.toList());
-    List<Material> signs = Arrays
+    protected List<Material> signs = Arrays
         .asList(Material.ACACIA_SIGN,
                 Material.BIRCH_SIGN,
                 Material.DARK_OAK_SIGN,
@@ -89,7 +90,8 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 Material.SPRUCE_SIGN,
                 Material.CRIMSON_SIGN,
                 Material.WARPED_SIGN);
-    int growCooldown = 50;
+    protected int growCooldown = 50;
+    protected boolean explodeGrass;
     private List<Snowman> snowmen = new ArrayList<>();
     private Map<Vec, ArmorStand> armorStands = new HashMap<>();
 
@@ -129,7 +131,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         for (Placed placed : state.placedSigns) {
             Vec vec = Vec.v(placed.x, placed.y, placed.z);
             ArmorStand armorStand = armorStands.get(vec);
-            if (armorStand == null || !armorStand.isValid()) {
+            if (armorStand == null || armorStand.isDead()) {
                 armorStand = w.spawn(vec.toBlock(w).getLocation().add(0.5, 1.0, 0.5), ArmorStand.class, as -> {
                         as.setPersistent(false);
                         as.setCustomName(ChatColor.GRAY + placed.ownerName);
@@ -444,43 +446,69 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         block.getRelative(0, 1, 0).setType(Material.SNOW);
     }
 
+    /**
+     * Purge a sign at location.
+     * @param block the block _below_ the sign
+     * @param destroyer name of the destructor
+     * @return true if a sign was purged, false otherwise.
+     */
     boolean purgeSign(Block block, String destroyer) {
+        Placed placed = null;
         for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
-            Placed placed = iter.next();
+            Placed it = iter.next();
             if (placed.x == block.getX() && placed.z == block.getZ()) {
-                announceArena(ChatColor.GREEN + placed.ownerName
-                              + " was destroyed by " + destroyer + ":");
+                placed = it;
                 iter.remove();
-                Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
-                BlockState blockState = signBlock.getState();
-                if (blockState instanceof Sign) {
-                    Sign sign = (Sign) blockState;
-                    for (Component line: sign.lines()) {
-                        if (line == null) continue;
-                        announceArena(Component.text()
-                                      .append(VanillaItems.componentOf(Material.OAK_SIGN))
-                                      .append(Component.space())
-                                      .append(line)
-                                      .build());
-                    }
-                }
-                World world = block.getWorld();
-                world.playSound(block.getLocation(),
-                                Sound.ENTITY_GENERIC_EXPLODE,
-                                SoundCategory.MASTER,
-                                1.0f, 2.0f);
-                world.spawnParticle(Particle.EXPLOSION_LARGE,
-                                    block.getLocation().add(0.5, 1.5, 0.5),
-                                    8,
-                                    0.2, 0.2, 0.2,
-                                    0.0);
-                Vec vec = Vec.v(placed.x, placed.y, placed.z);
-                ArmorStand armorStand = armorStands.remove(vec);
-                if (armorStand != null) armorStand.remove();
-                return true;
+                break;
             }
         }
-        return false;
+        if (placed == null) return false;
+        announceArena(ChatColor.GREEN + placed.ownerName
+                      + " was destroyed by " + destroyer + ":");
+        Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
+        BlockState blockState = signBlock.getState();
+        if (blockState instanceof Sign) {
+            Sign sign = (Sign) blockState;
+            for (Component line: sign.lines()) {
+                if (line == null) continue;
+                announceArena(Component.text()
+                              .append(VanillaItems.componentOf(Material.OAK_SIGN))
+                              .append(Component.space())
+                              .append(line)
+                              .build());
+            }
+        }
+        World world = block.getWorld();
+        world.playSound(block.getLocation(),
+                        Sound.ENTITY_GENERIC_EXPLODE,
+                        SoundCategory.MASTER,
+                        1.0f, 2.0f);
+        world.spawnParticle(Particle.EXPLOSION_LARGE,
+                            block.getLocation().add(0.5, 1.5, 0.5),
+                            8,
+                            0.2, 0.2, 0.2,
+                            0.0);
+        Vec vec = Vec.v(placed.x, placed.y, placed.z);
+        ArmorStand armorStand = armorStands.remove(vec);
+        if (armorStand != null) armorStand.remove();
+        if (explodeGrass && !state.snow) {
+            final int explodeRadius = 2;
+            final double explodeDistance = (double) explodeRadius + 0.5;
+            for (int dz = -explodeRadius; dz <= explodeRadius; dz += 1) {
+                for (int dx = -explodeRadius; dx <= explodeRadius; dx += 1) {
+                    if (dx == 0 && dz == 0) continue;
+                    double distance = Math.sqrt((double) (dx * dx + dz * dz));
+                    if (distance > explodeDistance) continue;
+                    Vec vec2 = Vec.v(block.getX() + dx, block.getY(), block.getZ() + dz);
+                    if (!arena.grassBlocks.contains(vec2)) continue;
+                    Block block2 = block.getRelative(dx, 0, dz);
+                    if (block2.getType() == Material.GRASS) {
+                        block2.setType(Material.DIRT);
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     void setupGameState(GameState gameState) {
@@ -854,9 +882,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (state.gameState != GameState.GROW) return;
         Player player = event.getPlayer();
         if (!isInArena(player)) return;
-        List<String> ls = new ArrayList<>();
+        List<Component> ls = new ArrayList<>();
         int left = state.placedSigns.size();
-        ls.add(ChatColor.GREEN + "Signs Left " + ChatColor.WHITE + left);
+        ls.add(Component.text("Signs Left ", NamedTextColor.GREEN)
+               .append(Component.text("" + left, NamedTextColor.WHITE)));
         String all = state.placedSigns.stream()
             .map(s -> s.ownerName)
             .sorted()
@@ -865,8 +894,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (alls.size() > 3) {
             alls = alls.subList(0, 3);
         }
-        ls.addAll(alls);
-        event.addLines(this, Priority.HIGH, ls);
+        for (String l : alls) {
+            ls.add(Component.text(l));
+        }
+        event.add(this, Priority.HIGH, ls);
     }
 
     /**
