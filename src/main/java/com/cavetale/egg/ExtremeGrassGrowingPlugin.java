@@ -520,6 +520,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                     Block block2 = block.getRelative(dx, 0, dz);
                     if (block2.getType() == Material.GRASS_BLOCK) {
                         block2.setType(Material.DIRT);
+                        Block block3 = block2.getRelative(0, 1, 0);
+                        if (flowers.contains(block3.getType())) {
+                            block3.setType(Material.AIR);
+                            Block block4 = block3.getRelative(0, 1, 0);
+                            if (flowers.contains(block4.getType())) {
+                                block4.setType(Material.AIR);
+                            }
+                        }
                     }
                 }
             }
