@@ -308,6 +308,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         case "event": {
             if (args.length == 1) {
                 sender.sendMessage(Component.text("Event mode: " + state.event, NamedTextColor.YELLOW));
+                return true;
             }
             if (args.length != 2) return false;
             try {
