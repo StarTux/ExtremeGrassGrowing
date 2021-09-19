@@ -91,7 +91,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 Material.CRIMSON_SIGN,
                 Material.WARPED_SIGN);
     protected int growCooldown = 50;
-    protected boolean explodeGrass;
+    protected boolean explodeGrass = true;
     private List<Snowman> snowmen = new ArrayList<>();
     private Map<Vec, ArmorStand> armorStands = new HashMap<>();
 
