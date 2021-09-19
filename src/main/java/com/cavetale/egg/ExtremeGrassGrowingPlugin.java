@@ -880,7 +880,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         if (state.placedSigns.size() == 1) {
             cleanUp();
             Placed winner = state.placedSigns.get(0);
-            announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
+            announceArena("\n" + ChatColor.GREEN + winner.ownerName + " wins the game!\n ");
             state.winners.add(winner.ownerName);
             setupGameState(GameState.PAUSE);
             if (state.event) {
