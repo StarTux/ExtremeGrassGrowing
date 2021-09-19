@@ -131,10 +131,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         for (Placed placed : state.placedSigns) {
             Vec vec = Vec.v(placed.x, placed.y, placed.z);
             ArmorStand armorStand = armorStands.get(vec);
+            Player owner = Bukkit.getPlayer(placed.owner);
+            Component ownerName = owner != null
+                ? owner.displayName()
+                : Component.text(placed.ownerName);
             if (armorStand == null || armorStand.isDead()) {
                 armorStand = w.spawn(vec.toBlock(w).getLocation().add(0.5, 1.0, 0.5), ArmorStand.class, as -> {
                         as.setPersistent(false);
-                        as.setCustomName(ChatColor.GRAY + placed.ownerName);
+                        as.customName(ownerName);
                         as.setCustomNameVisible(true);
                         as.setInvisible(true);
                         as.setGravity(false);
@@ -407,15 +411,17 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
                 Block grassBlock = grassBlocks.get(random.nextInt(grassBlocks.size()));
                 for (int dx = -1; dx <= 1; dx += 1) {
                     for (int dz = -1; dz <= 1; dz += 1) {
-                        Block dirtBlock = grassBlock.getRelative(dx, 0, dz);
-                        if (dirtBlock.getType() != Material.DIRT) continue;
-                        if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
-                        Vec vec = Vec.v(dirtBlock);
-                        if (!state.spreadOptions.contains(vec)) {
-                            state.spreadOptions.add(vec);
-                            for (Placed placed : state.placedSigns) {
-                                if (placed.x == vec.x && placed.z == vec.z) {
-                                    state.signOption = true;
+                        for (int dy = -1; dy <= 1; dy += 1) {
+                            Block dirtBlock = grassBlock.getRelative(dx, dy, dz);
+                            if (dirtBlock.getType() != Material.DIRT) continue;
+                            if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
+                            Vec vec = Vec.v(dirtBlock);
+                            if (!state.spreadOptions.contains(vec)) {
+                                state.spreadOptions.add(vec);
+                                for (Placed placed : state.placedSigns) {
+                                    if (placed.x == vec.x && placed.z == vec.z) {
+                                        state.signOption = true;
+                                    }
                                 }
                             }
                         }
@@ -479,8 +485,14 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             }
         }
         if (placed == null) return false;
-        announceArena(ChatColor.GREEN + placed.ownerName
-                      + " was destroyed by " + destroyer + ":");
+        Player owner = Bukkit.getPlayer(placed.owner);
+        Component ownerName = owner != null
+            ? owner.displayName()
+            : Component.text(placed.ownerName);
+        announceArena(Component.text().color(NamedTextColor.GREEN)
+                      .append(ownerName)
+                      .append(Component.text(" was destroyed by " + destroyer + ":"))
+                      .build());
         Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
         BlockState blockState = signBlock.getState();
         if (blockState instanceof Sign) {
