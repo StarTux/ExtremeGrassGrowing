@@ -788,7 +788,9 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             saveState();
             event.setCancelled(false);
             player.sendMessage(ChatColor.GREEN + "Sign placed.");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+            if (state.event) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
+            }
         } else {
             if (!player.isOp()) {
                 event.setCancelled(true);
