@@ -305,6 +305,21 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             player.sendMessage("snowman spawned");
             return true;
         }
+        case "event": {
+            if (args.length == 1) {
+                sender.sendMessage(Component.text("Event mode: " + state.event, NamedTextColor.YELLOW));
+            }
+            if (args.length != 2) return false;
+            try {
+                state.event = Boolean.parseBoolean(args[1]);
+            } catch (IllegalArgumentException iae) {
+                sender.sendMessage(Component.text("Boolean expected: " + args[1], NamedTextColor.RED));
+                return true;
+            }
+            saveState();
+            sender.sendMessage(Component.text("Event mode set to " + state.event, NamedTextColor.YELLOW));
+            return true;
+        }
         default: return false;
         }
     }
@@ -651,6 +666,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
         boolean debug = false;
         List<Vec> spreadOptions = new ArrayList<>();
         boolean signOption = false;
+        boolean event = false;
     }
 
     void loadArena() {
@@ -855,9 +871,11 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin implements Liste
             Placed winner = state.placedSigns.get(0);
             announceArena(ChatColor.GREEN + winner.ownerName + " wins the game!");
             state.winners.add(winner.ownerName);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " GrassGrower EGGspert Bee BuzzBee Bumblebee");
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
             setupGameState(GameState.PAUSE);
+            if (state.event) {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "titles unlockset " + winner.ownerName + " GrassGrower EGGspert Bee BuzzBee Bumblebee");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
+            }
         }
     }
 

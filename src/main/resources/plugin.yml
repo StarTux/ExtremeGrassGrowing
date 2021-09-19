@@ -25,6 +25,7 @@ commands:
       /egga snow - toggle snow
       /egga list - list placed signs
       /egga hi - highlight arena blocks
+      /egga event true|false - set event mode
 permissions:
   egg.egg:
     description: Use /egg
