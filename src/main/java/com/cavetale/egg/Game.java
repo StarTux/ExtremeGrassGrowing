@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -204,16 +205,32 @@ public final class Game {
         if (state.placedSigns.size() == 1) {
             cleanUp();
             Placed winner = state.placedSigns.get(0);
-            announceArena("\n" + ChatColor.GREEN + winner.ownerName + " wins the game!\n ");
-            state.winners.add(winner.ownerName);
+            Player winningPlayer = Bukkit.getPlayer(winner.owner);
+            String winnerName = winningPlayer != null
+                ? winningPlayer.getName()
+                : winner.ownerName;
+            Component winnerDisplayName = winningPlayer != null
+                ? winningPlayer.displayName()
+                : Component.text(winner.ownerName);
+            announceArena(Component.join(JoinConfiguration.noSeparators(), new Component[] {
+                        Component.newline(),
+                        winnerDisplayName,
+                        Component.text(" wins the game!"),
+                        Component.newline(),
+                    }).color(NamedTextColor.GREEN));
+            state.winners.add(winnerName);
             setupGameState(GameState.END);
             if (isMainEventGame()) {
-                String cmd = "titles unlockset " + winner.ownerName + String.join(" ", plugin.winnerTitles);
+                plugin.getLogger().info(name + ": " + winnerName + " wins the game!");
+                String cmd = "titles unlockset " + winnerName + String.join(" ", plugin.winnerTitles);
                 plugin.getLogger().info("Running command: " + cmd);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winner.ownerName + " kitty_coin");
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winnerName + " kitty_coin");
             }
         } else if (state.placedSigns.size() == 0) {
+            if (isMainEventGame()) {
+                plugin.getLogger().info(name + ": Nobody wins the game!");
+            }
             announceArena(Component.text("\nNobody wins the game!\n ", NamedTextColor.GREEN));
             cleanUp();
             setupGameState(GameState.END);
