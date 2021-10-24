@@ -301,7 +301,7 @@ public final class Game {
             state.gameState = GameState.PAUSE;
             return;
         }
-        if (getPlayers() == null) {
+        if (getPlayers().isEmpty()) {
             cleanUp();
             setupGameState(GameState.PAUSE);
             return;
