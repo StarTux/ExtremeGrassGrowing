@@ -2,6 +2,7 @@ package com.cavetale.egg;
 
 import com.cavetale.core.event.block.PlayerBlockAbilityQuery;;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
+import com.cavetale.core.event.player.PluginPlayerEvent;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.util.Json;
@@ -824,5 +825,12 @@ public final class Game {
             || arena.grassBlocks.contains(vec.add(0, -1, 0))
             || arena.grassBlocks.contains(vec.add(0, -2, 0));
         if (forbidden) event.setCancelled(true);
+    }
+
+    protected void onPluginPlayer(PluginPlayerEvent event) {
+        switch (event.getName()) {
+        case START_FLYING: event.setCancelled(true);
+        default: break;
+        }
     }
 }
