@@ -5,7 +5,7 @@ api-version: '1.17'
 description: Extreme Grass Growing Event
 author: StarTux
 website: https://github.com/StarTux/ExtremeGrassGrowing
-depend: [Core, Sidebar]
+depend: [Core, Sidebar, WorldEdit]
 softdepend: []
 commands:
   egg:
@@ -17,15 +17,20 @@ commands:
     description: Extreme Grass Growing Admin Interface
     permission: egg.admin
     usage: |-
-      /egga area - Set area
+      /egga reload - Reload arenas and global
+      /egga list - List games/arenas
+      /egga tp <name> - Teleport to arena
+      /egga create <name> - Create arena
+      /egga area <name> - Set area
       /egga grass [clear|remove] - change grass blocks
       /egga viewer [clear|remove] - change viewer blocks
       /egga state PAUSE|PLACE|GROW - set game state
       /egga clearwinners - clear winners
       /egga snow - toggle snow
-      /egga list - list placed signs
+      /egga signs - list placed signs
       /egga hi - highlight arena blocks
       /egga event true|false - set event mode
+      /egga main <name> - set main game
 permissions:
   egg.egg:
     description: Use /egg

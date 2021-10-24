@@ -2,6 +2,9 @@ package com.cavetale.egg;
 
 import lombok.Value;
 
+/**
+ * Json file.
+ */
 @Value
 public final class Cuboid {
     static final Cuboid ZERO = new Cuboid(Vec.ZERO, Vec.ZERO);

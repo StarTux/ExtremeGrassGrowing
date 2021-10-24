@@ -1,6 +1,7 @@
 package com.cavetale.egg;
 
 import lombok.Value;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 
@@ -11,13 +12,23 @@ public final class Vec {
     public final int y;
     public final int z;
 
-    static Vec v(int x, int y, int z) {
+    public static Vec v(int x, int y, int z) {
         return new Vec(x, y, z);
     }
-    static Vec v(Block block) {
+
+    public static Vec v(Block block) {
         return new Vec(block.getX(), block.getY(), block.getZ());
     }
-    Block toBlock(World w) {
+
+    public static Vec v(Location location) {
+        return new Vec(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+    }
+
+    public Block toBlock(World w) {
         return w.getBlockAt(x, y, z);
+    }
+
+    public Vec add(int dx, int dy, int dz) {
+        return v(x + dx, y + dy, z + dz);
     }
 }
