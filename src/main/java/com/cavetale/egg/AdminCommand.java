@@ -314,6 +314,7 @@ public final class AdminCommand implements TabExecutor {
             }
             Game oldMain = plugin.getMainGame();
             plugin.global.mainGame = name;
+            plugin.saveGlobal();
             if (plugin.global.event && oldMain != null) {
                 for (Player other : oldMain.getPlayers()) {
                     newGame.warpPlayerOutside(other, TeleportCause.COMMAND);
