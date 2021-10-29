@@ -11,4 +11,5 @@ public final class Arena {
     protected Cuboid area = Cuboid.ZERO;
     protected Set<Vec> grassBlocks = new HashSet<>();
     protected Set<Vec> viewerBlocks = new HashSet<>();
+    protected Vec startButton;
 }

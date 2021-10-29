@@ -31,6 +31,7 @@ commands:
       /egga hi - highlight arena blocks
       /egga event true|false - set event mode
       /egga main <name> - set main game
+      /egga startbutton - set start button
 permissions:
   egg.egg:
     description: Use /egg

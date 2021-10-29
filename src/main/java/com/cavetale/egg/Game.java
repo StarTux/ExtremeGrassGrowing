@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
@@ -29,6 +30,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -271,18 +273,21 @@ public final class Game {
         return null;
     }
 
-    protected void warpPlayerOutside(Player player, TeleportCause cause) {
+    protected boolean warpPlayerOutside(Player player, TeleportCause cause) {
         List<Vec> blocks = new ArrayList<>(arena.viewerBlocks);
-        if (blocks.size() > 0) {
-            Vec block = blocks.get(random.nextInt(blocks.size()));
-            Location loc = new Location(getWorld(),
-                                        (double) block.x + 0.5,
-                                        (double) block.y + 1.0,
-                                        (double) block.z + 0.5,
-                                        player.getLocation().getYaw(),
-                                        player.getLocation().getPitch());
-            player.teleport(loc, cause);
-        }
+        if (blocks.isEmpty()) return false;
+        Vec block = blocks.get(random.nextInt(blocks.size()));
+        World world = getWorld();
+        world.getChunkAtAsync(block.x >> 4, block.z >> 4, (Consumer<Chunk>) chunk -> {
+                Location loc = new Location(world,
+                                            (double) block.x + 0.5,
+                                            (double) block.y + 1.0,
+                                            (double) block.z + 0.5,
+                                            player.getLocation().getYaw(),
+                                            player.getLocation().getPitch());
+                player.teleport(loc, cause);
+            });
+        return true;
     }
 
     public World getWorld() {
@@ -676,17 +681,31 @@ public final class Game {
 
     protected void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
-        if (player.isOp()) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (!(event.hasBlock())) return;
         Block block = event.getClickedBlock();
+        Vec vector = Vec.v(block);
+        if (vector.equals(arena.startButton)) {
+            if (state.gameState != GameState.PAUSE) {
+                player.sendActionBar(Component.text("Game already running!", NamedTextColor.RED));
+                return;
+            }
+            if (plugin.global.event) {
+                player.sendActionBar(Component.text("Cannot start during events!", NamedTextColor.RED));
+                return;
+            }
+            setupGameState(GameState.PLACE);
+            player.sendActionBar(Component.text("Starting Game", NamedTextColor.GREEN));
+            return;
+        }
+        if (player.isOp()) return;
         if (state.gameState == GameState.GROW) {
             Material mat = block.getType();
             if (Tag.DOORS.isTagged(mat) || MaterialTags.FENCE_GATES.isTagged(mat)) {
                 event.setCancelled(true);
             }
         } else if (state.gameState == GameState.PLACE) {
-            if (arena.grassBlocks.contains(Vec.v(block))) {
+            if (arena.grassBlocks.contains(vector)) {
                 event.setCancelled(false);
             } else {
                 Placed placed = findPlacedSign(block);

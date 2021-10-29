@@ -31,7 +31,7 @@ public final class AdminCommand implements TabExecutor {
                              "viewer", "grass", "area", "state",
                              "clearwinners", "snow", "signs", "hi",
                              "info", "debug", "snowman", "event",
-                             "main")
+                             "main", "startbutton")
                 .filter(it -> it.contains(low))
                 .collect(Collectors.toList());
         } else if (args.length == 2) {
@@ -321,6 +321,26 @@ public final class AdminCommand implements TabExecutor {
                 }
             }
             sender.sendMessage(Component.text("Main game is now " + newGame.getName(), NamedTextColor.YELLOW));
+            return true;
+        }
+        case "startbutton": {
+            if (args.length != 1) return false;
+            if (player == null) {
+                sender.sendMessage(Component.text("[egga:tp] player expected", NamedTextColor.RED));
+                return true;
+            }
+            if (game == null) {
+                sender.sendMessage(Component.text("Extreme Grass Growing arena required!", NamedTextColor.RED));
+                return true;
+            }
+            Cuboid selection = WorldEdit.getSelection(player);
+            if (selection == null) {
+                player.sendMessage(Component.text("No selection!", NamedTextColor.RED));
+                return true;
+            }
+            game.arena.startButton = selection.lo;
+            game.saveArena();
+            player.sendMessage(Component.text("Start button set to " + game.arena.startButton, NamedTextColor.YELLOW));
             return true;
         }
         default: return false;
