@@ -730,12 +730,12 @@ public final class Game {
                 .map(s -> s.ownerName)
                 .sorted()
                 .collect(Collectors.joining(" "));
-            List<String> alls = Text.wrap(all, 30);
+            List<String> alls = Text.wrap(all, 24);
             if (alls.size() > 3) {
                 alls = alls.subList(0, 3);
             }
             for (String l : alls) {
-                ls.add(Component.text(l));
+                ls.add(Component.text(l, NamedTextColor.GRAY));
             }
             event.add(plugin, Priority.HIGHEST, ls);
         } else if (state.gameState == GameState.PLACE) {
