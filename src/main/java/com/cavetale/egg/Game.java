@@ -225,7 +225,7 @@ public final class Game {
             setupGameState(GameState.END);
             if (isMainEventGame()) {
                 plugin.getLogger().info(name + ": " + winnerName + " wins the game!");
-                String cmd = "titles unlockset " + winnerName + String.join(" ", plugin.winnerTitles);
+                String cmd = "titles unlockset " + winnerName + " " + String.join(" ", plugin.winnerTitles);
                 plugin.getLogger().info("Running command: " + cmd);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winnerName + " kitty_coin");
