@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -412,6 +413,7 @@ public final class Game {
                 s.setDerp(true);
             });
         snowmen.add(snowman);
+        state.snowmen.add(snowman.getUniqueId());
         snowman.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.6);
         return snowman;
     }
@@ -537,15 +539,6 @@ public final class Game {
     protected void setupGameState(GameState gameState) {
         switch (gameState) {
         case PAUSE: {
-            if (state.snow) {
-                World world = Bukkit.getWorld(arena.world);
-                if (world != null) {
-                    for (Snowman snowman : snowmen) {
-                        snowman.remove();
-                    }
-                    snowmen.clear();
-                }
-            }
             break;
         }
         case PLACE: {
@@ -628,6 +621,19 @@ public final class Game {
         }
         case END: {
             state.endStarted = System.currentTimeMillis();
+            if (state.snow) {
+                for (Snowman snowman : snowmen) {
+                    snowman.remove();
+                }
+                snowmen.clear();
+                for (UUID uuid : state.snowmen) {
+                    Entity entity = Bukkit.getEntity(uuid);
+                    if (entity != null && entity instanceof Snowman snowman) {
+                        snowman.remove();
+                    }
+                }
+                state.snowmen.clear();
+            }
             break;
         }
         default: throw new IllegalStateException(gameState.name());
