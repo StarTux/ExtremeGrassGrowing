@@ -18,7 +18,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
     protected File arenasFolder;
     protected File statesFolder;
     protected File globalFile;
-    protected final List<String> winnerTitles = List.of(new String[] {
+    protected static final List<String> WINNER_TITLES = List.of(new String[] {
             "GrassGrower",
             "EGGspert",
             "Bee",
@@ -26,6 +26,12 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
             "Bumblebee",
             "GrassBlock",
             "Grass",
+        });
+    protected static final List<String> SNOW_WINNER_TITLES = List.of(new String[] {
+            "Snowman",
+            "Snowplow",
+            "Snowball",
+            "SnowBucket",
         });
 
     @Override
