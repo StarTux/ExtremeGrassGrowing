@@ -6,6 +6,9 @@ import com.cavetale.core.event.player.PluginPlayerEvent;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.util.Json;
+import com.cavetale.fam.trophy.SQLTrophy;
+import com.cavetale.fam.trophy.Trophies;
+import com.cavetale.mytems.Mytems;
 import com.cavetale.sidebar.PlayerSidebarEvent;
 import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.MaterialTags;
@@ -232,7 +235,23 @@ public final class Game {
                                         : plugin.WINNER_TITLES));
                 plugin.getLogger().info("Running command: " + cmd);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "mytems give " + winnerName + " kitty_coin");
+                if (winningPlayer != null) {
+                    Mytems.KITTY_COIN.giveItemStack(winningPlayer, 1);
+                }
+                SQLTrophy trophy = state.snow
+                    ? new SQLTrophy(winner.owner,
+                                    "extreme_grass_growing_event",
+                                    0,
+                                    new ItemStack(Material.SNOW),
+                                    plugin.TITLE,
+                                    "Your sign survived the deadly sprawling snow!")
+                    : new SQLTrophy(winner.owner,
+                                    "extreme_grass_growing_event",
+                                    0,
+                                    new ItemStack(Material.GRASS),
+                                    plugin.TITLE,
+                                    "Your sign survived the deadly sprawling grass!");
+                Trophies.insertTrophies(List.of(trophy));
             }
         } else if (state.placedSigns.size() == 0) {
             if (isMainEventGame()) {
@@ -557,7 +576,7 @@ public final class Game {
             }
             for (Player player : getPlayers()) {
                 Material signMaterial = randomSign();
-                if (plugin.global.event) {
+                if (isMainEventGame()) {
                     player.getInventory().addItem(new ItemStack(signMaterial));
                 }
                 player.showTitle(Title.title(VanillaItems.componentOf(signMaterial),

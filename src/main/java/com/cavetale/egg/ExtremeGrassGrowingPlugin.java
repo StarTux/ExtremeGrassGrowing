@@ -5,9 +5,15 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.plugin.java.JavaPlugin;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
     protected final List<Game> gameList = new ArrayList<>();
@@ -33,6 +39,28 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
             "Snowball",
             "SnowBucket",
         });
+    protected static final Component TITLE = join(noSeparators(),
+                                                  text("E", GREEN),
+                                                  text("x", DARK_GREEN),
+                                                  text("t", GREEN),
+                                                  text("r", DARK_GREEN),
+                                                  text("e", GREEN),
+                                                  text("m", DARK_GREEN),
+                                                  text("e", GREEN),
+                                                  space(),
+                                                  text("G", DARK_GREEN),
+                                                  text("r", GREEN),
+                                                  text("a", DARK_GREEN),
+                                                  text("s", GREEN),
+                                                  text("s", DARK_GREEN),
+                                                  space(),
+                                                  text("G", GREEN),
+                                                  text("r", DARK_GREEN),
+                                                  text("o", GREEN),
+                                                  text("w", DARK_GREEN),
+                                                  text("i", GREEN),
+                                                  text("n", DARK_GREEN),
+                                                  text("g", GREEN));
 
     @Override
     public void onEnable() {
