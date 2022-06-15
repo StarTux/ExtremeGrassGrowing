@@ -1,17 +1,23 @@
 main: com.cavetale.egg.ExtremeGrassGrowingPlugin
 name: ExtremeGrassGrowing
-version: '0.1'
-api-version: '1.17'
+
+version: 0.1
+api-version: 1.19
+
 description: Extreme Grass Growing Event
 author: StarTux
 website: https://github.com/StarTux/ExtremeGrassGrowing
+
 depend: [Core, Sidebar, Mytems, Fam, WorldEdit]
 softdepend: []
+
 commands:
+
   egg:
     description: Warp to the EGG arena
     permission: egg.egg
     usage: /egg
+
   eggadmin:
     aliases: egga
     description: Extreme Grass Growing Admin Interface
@@ -32,8 +38,11 @@ commands:
       /egga event true|false - set event mode
       /egga main <name> - set main game
       /egga startbutton - set start button
+
 permissions:
+
   egg.egg:
     description: Use /egg
+
   egg.admin:
     description: Use /egga
