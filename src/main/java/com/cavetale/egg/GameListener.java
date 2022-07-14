@@ -2,7 +2,7 @@ package com.cavetale.egg;
 
 import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
-import com.cavetale.sidebar.PlayerSidebarEvent;
+import com.cavetale.core.event.hud.PlayerHudEvent;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -41,8 +41,8 @@ public final class GameListener implements Listener {
     }
 
     @EventHandler
-    void onPlayerSidebar(PlayerSidebarEvent event) {
-        plugin.applyGame(event.getPlayer().getLocation(), game -> game.onPlayerSidebar(event));
+    void onPlayerHud(PlayerHudEvent event) {
+        plugin.applyGame(event.getPlayer().getLocation(), game -> game.onPlayerHud(event));
     }
 
     /**

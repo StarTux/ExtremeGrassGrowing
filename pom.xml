@@ -28,14 +28,8 @@
 
     <!-- WorldEdit Repo -->
     <repository>
-      <id>sk89q-snapshots</id>
-      <url>http://maven.sk89q.com/artifactory/repo</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
+      <id>worldedit</id>
+      <url>http://maven.enginehub.org/repo/</url>
     </repository>
 
   </repositories>
@@ -54,14 +48,6 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>1.18.20</version>
-      <scope>provided</scope>
-    </dependency>
-
-    <!-- Sidebar -->
-    <dependency>
-      <groupId>com.cavetale.sidebar</groupId>
-      <artifactId>sidebar</artifactId>
-      <version>0.1-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
 

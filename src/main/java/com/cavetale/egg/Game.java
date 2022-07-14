@@ -2,14 +2,14 @@ package com.cavetale.egg;
 
 import com.cavetale.core.event.block.PlayerBlockAbilityQuery;;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;
 import com.cavetale.mytems.Mytems;
-import com.cavetale.sidebar.PlayerSidebarEvent;
-import com.cavetale.sidebar.Priority;
 import com.destroystokyo.paper.MaterialTags;
 import java.io.File;
 import java.time.Duration;
@@ -743,7 +743,7 @@ public final class Game {
         }
     }
 
-    protected void onPlayerSidebar(PlayerSidebarEvent event) {
+    protected void onPlayerHud(PlayerHudEvent event) {
         if (state.gameState == GameState.GROW) {
             Player player = event.getPlayer();
             List<Component> ls = new ArrayList<>();
@@ -764,7 +764,7 @@ public final class Game {
             for (String l : alls) {
                 ls.add(Component.text(l, NamedTextColor.GRAY));
             }
-            event.add(plugin, Priority.HIGHEST, ls);
+            event.sidebar(PlayerHudPriority.HIGHEST, ls);
         } else if (state.gameState == GameState.PLACE) {
             Player player = event.getPlayer();
             List<Component> ls = new ArrayList<>();
@@ -778,7 +778,7 @@ public final class Game {
                 : Math.max(0, (placeTime.toMillis() - (System.currentTimeMillis() - state.placeStarted) - 1L) / 1000L + 1L);
             ls.add(Component.text("Time Left ", NamedTextColor.GRAY)
                    .append(Component.text(seconds + "s", NamedTextColor.WHITE)));
-            event.add(plugin, Priority.HIGHEST, ls);
+            event.sidebar(PlayerHudPriority.HIGHEST, ls);
         }
     }
 
