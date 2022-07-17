@@ -1,11 +1,12 @@
 package com.cavetale.egg;
 
-import com.cavetale.core.event.block.PlayerBlockAbilityQuery;;
+import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
+import com.cavetale.core.item.ItemKinds;
 import com.cavetale.core.util.Json;
 import com.cavetale.fam.trophy.SQLTrophy;
 import com.cavetale.fam.trophy.Trophies;
@@ -28,8 +29,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -66,6 +65,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
+import static com.cavetale.core.util.CamelCase.toCamelCase;
+import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.newline;
+import static net.kyori.adventure.text.Component.space;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 /**
  * The runtime class of a game of Extreme Grass Growing. An instance
@@ -177,7 +183,10 @@ public final class Game {
 
     private void spreadTo(Block block) {
         Material flower = flowers.get(random.nextInt(flowers.size()));
-        boolean removed = purgeSign(block, flower.name().toLowerCase().replace("_", " "));
+        Component flowerName = flower.isItem()
+            ? ItemKinds.chatDescription(new ItemStack(flower))
+            : text(toCamelCase(" ", flower));
+        boolean removed = purgeSign(block, flowerName);
         if (removed) {
             growCooldown = 200;
             saveState();
@@ -217,13 +226,13 @@ public final class Game {
                 : winner.ownerName;
             Component winnerDisplayName = winningPlayer != null
                 ? winningPlayer.displayName()
-                : Component.text(winner.ownerName);
-            announceArena(Component.join(JoinConfiguration.noSeparators(), new Component[] {
-                        Component.newline(),
+                : text(winner.ownerName);
+            announceArena(join(noSeparators(), new Component[] {
+                        newline(),
                         winnerDisplayName,
-                        Component.text(" wins the game!"),
-                        Component.newline(),
-                    }).color(NamedTextColor.GREEN));
+                        text(" wins the game!"),
+                        newline(),
+                    }).color(GREEN));
             state.winners.add(winnerName);
             setupGameState(GameState.END);
             if (isMainEventGame()) {
@@ -256,7 +265,7 @@ public final class Game {
             if (isMainEventGame()) {
                 plugin.getLogger().info(name + ": Nobody wins the game!");
             }
-            announceArena(Component.text("\nNobody wins the game!\n ", NamedTextColor.GREEN));
+            announceArena(text("\nNobody wins the game!\n ", GREEN));
             cleanUp();
             setupGameState(GameState.END);
         }
@@ -446,7 +455,7 @@ public final class Game {
         if (block.getType() == Material.SNOW_BLOCK) return;
         if (!snowmen.contains(snowman)) snowmen.add(snowman);
         block.setType(Material.SNOW_BLOCK);
-        if (purgeSign(block, "snowman")) {
+        if (purgeSign(block, text("Snowman"))) {
             spawnSnowman(block.getLocation().add(0.5, 1.0, 0.5));
             for (Snowman other : snowmen) {
                 other.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 9, true, false));
@@ -462,7 +471,7 @@ public final class Game {
      * @param destroyer name of the destructor
      * @return true if a sign was purged, false otherwise.
      */
-    private boolean purgeSign(Block block, String destroyer) {
+    private boolean purgeSign(Block block, Component destroyer) {
         Placed placed = null;
         for (Iterator<Placed> iter = state.placedSigns.iterator(); iter.hasNext();) {
             Placed it = iter.next();
@@ -476,20 +485,17 @@ public final class Game {
         Player owner = Bukkit.getPlayer(placed.owner);
         Component ownerName = owner != null
             ? owner.displayName()
-            : Component.text(placed.ownerName);
-        announceArena(Component.text().color(NamedTextColor.GREEN)
-                      .append(ownerName)
-                      .append(Component.text(" was destroyed by " + destroyer + ":"))
-                      .build());
+            : text(placed.ownerName);
+        announceArena(join(noSeparators(), ownerName, text(" was destroyed by "), destroyer).color(GREEN));
         Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
         BlockState blockState = signBlock.getState();
         if (blockState instanceof Sign) {
             Sign sign = (Sign) blockState;
             for (Component line: sign.lines()) {
                 if (line == null) continue;
-                announceArena(Component.text()
+                announceArena(text()
                               .append(VanillaItems.componentOf(Material.OAK_SIGN))
-                              .append(Component.space())
+                              .append(space())
                               .append(line)
                               .build());
             }
@@ -542,7 +548,7 @@ public final class Game {
             Player owner = Bukkit.getPlayer(placed.owner);
             Component ownerName = owner != null
                 ? owner.displayName()
-                : Component.text(placed.ownerName);
+                : text(placed.ownerName);
             if (armorStand == null || armorStand.isDead()) {
                 armorStand = w.spawn(vec.toBlock(w).getLocation().add(0.5, 1.0, 0.5), ArmorStand.class, as -> {
                         as.setPersistent(false);
@@ -579,8 +585,8 @@ public final class Game {
                     player.getInventory().addItem(new ItemStack(signMaterial));
                 }
                 player.showTitle(Title.title(VanillaItems.componentOf(signMaterial),
-                                             Component.text("Place your signs!", NamedTextColor.GREEN)));
-                player.sendMessage(Component.text("\nPlace your signs!\n ", NamedTextColor.GREEN));
+                                             text("Place your signs!", GREEN)));
+                player.sendMessage(text("\nPlace your signs!\n ", GREEN));
                 player.playSound(player.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.MASTER, 0.5f, 2.0f);
             }
             state.placedSigns.clear();
@@ -714,15 +720,15 @@ public final class Game {
         Vec vector = Vec.v(block);
         if (vector.equals(arena.startButton)) {
             if (state.gameState != GameState.PAUSE) {
-                player.sendActionBar(Component.text("Game already running!", NamedTextColor.RED));
+                player.sendActionBar(text("Game already running!", RED));
                 return;
             }
             if (plugin.global.event) {
-                player.sendActionBar(Component.text("Cannot start during events!", NamedTextColor.RED));
+                player.sendActionBar(text("Cannot start during events!", RED));
                 return;
             }
             setupGameState(GameState.PLACE);
-            player.sendActionBar(Component.text("Starting Game", NamedTextColor.GREEN));
+            player.sendActionBar(text("Starting Game", GREEN));
             return;
         }
         if (player.isOp()) return;
@@ -748,11 +754,11 @@ public final class Game {
             Player player = event.getPlayer();
             List<Component> ls = new ArrayList<>();
             if (plugin.global.debug) {
-                ls.add(Component.text("DEBUG MODE", NamedTextColor.RED));
+                ls.add(text("DEBUG MODE", RED));
             }
             int left = state.placedSigns.size();
-            ls.add(Component.text("Signs Left ", NamedTextColor.GREEN)
-                   .append(Component.text("" + left, NamedTextColor.WHITE)));
+            ls.add(text("Signs Left ", GREEN)
+                   .append(text("" + left, WHITE)));
             String all = state.placedSigns.stream()
                 .map(s -> s.ownerName)
                 .sorted()
@@ -762,22 +768,22 @@ public final class Game {
                 alls = alls.subList(0, 3);
             }
             for (String l : alls) {
-                ls.add(Component.text(l, NamedTextColor.GRAY));
+                ls.add(text(l, GRAY));
             }
             event.sidebar(PlayerHudPriority.HIGHEST, ls);
         } else if (state.gameState == GameState.PLACE) {
             Player player = event.getPlayer();
             List<Component> ls = new ArrayList<>();
             if (findPlacedSign(player) == null) {
-                ls.add(Component.text("Place your signs!", NamedTextColor.GREEN));
+                ls.add(text("Place your signs!", GREEN));
             } else {
-                ls.add(Component.text(Unicode.CHECKMARK.string + " Sign placed", NamedTextColor.GREEN));
+                ls.add(text(Unicode.CHECKMARK.string + " Sign placed", GREEN));
             }
             long seconds = state.placedSigns.isEmpty()
                 ? placeTime.toSeconds()
                 : Math.max(0, (placeTime.toMillis() - (System.currentTimeMillis() - state.placeStarted) - 1L) / 1000L + 1L);
-            ls.add(Component.text("Time Left ", NamedTextColor.GRAY)
-                   .append(Component.text(seconds + "s", NamedTextColor.WHITE)));
+            ls.add(text("Time Left ", GRAY)
+                   .append(text(seconds + "s", WHITE)));
             event.sidebar(PlayerHudPriority.HIGHEST, ls);
         }
     }
