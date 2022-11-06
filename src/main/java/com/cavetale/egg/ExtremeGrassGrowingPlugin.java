@@ -1,6 +1,7 @@
 package com.cavetale.egg;
 
 import com.cavetale.core.util.Json;
+import com.cavetale.fam.trophy.Highscore;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +62,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
                                                   text("i", GREEN),
                                                   text("n", DARK_GREEN),
                                                   text("g", GREEN));
+    protected List<Component> highscoreLines = List.of();
 
     @Override
     public void onEnable() {
@@ -73,6 +75,7 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
         getCommand("egg").setExecutor(eggCommand);
         getServer().getPluginManager().registerEvents(gameListener, this);
         loadGames();
+        computeHighscore();
     }
 
     @Override
@@ -146,5 +149,10 @@ public final class ExtremeGrassGrowingPlugin extends JavaPlugin {
         Game result = gameNamed(global.mainGame);
         if (result != null) return result;
         return gameList.isEmpty() ? null : gameList.get(0);
+    }
+
+    protected void computeHighscore() {
+        List<Highscore> list = Highscore.of(global.scores);
+        highscoreLines = Highscore.sidebar(list);
     }
 }

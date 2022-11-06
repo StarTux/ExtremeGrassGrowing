@@ -8,8 +8,6 @@ import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.item.ItemKinds;
 import com.cavetale.core.util.Json;
-import com.cavetale.fam.trophy.SQLTrophy;
-import com.cavetale.fam.trophy.Trophies;
 import com.cavetale.mytems.Mytems;
 import com.destroystokyo.paper.MaterialTags;
 import java.io.File;
@@ -246,20 +244,6 @@ public final class Game {
                 if (winningPlayer != null) {
                     Mytems.KITTY_COIN.giveItemStack(winningPlayer, 1);
                 }
-                SQLTrophy trophy = state.snow
-                    ? new SQLTrophy(winner.owner,
-                                    "extreme_grass_growing_event",
-                                    0,
-                                    new ItemStack(Material.SNOW),
-                                    plugin.TITLE,
-                                    "Your sign survived the deadly sprawling snow!")
-                    : new SQLTrophy(winner.owner,
-                                    "extreme_grass_growing_event",
-                                    0,
-                                    new ItemStack(Material.GRASS),
-                                    plugin.TITLE,
-                                    "Your sign survived the deadly sprawling grass!");
-                Trophies.insertTrophies(List.of(trophy));
             }
         } else if (state.placedSigns.size() == 0) {
             if (isMainEventGame()) {
@@ -538,6 +522,20 @@ public final class Game {
                 }
             }
         }
+        if (isMainEventGame()) {
+            final int size = state.placedSigns.size();
+            if (size <= 3) {
+                for (Placed survivor : state.placedSigns) {
+                    plugin.global.addScore(survivor.owner, size == 1 ? 3 : 2);
+                }
+            } else {
+                for (Placed survivor : state.placedSigns) {
+                    plugin.global.addScore(survivor.owner, 1);
+                }
+            }
+            plugin.saveGlobal();
+            plugin.computeHighscore();
+        }
         return true;
     }
 
@@ -770,6 +768,7 @@ public final class Game {
             for (String l : alls) {
                 ls.add(text(l, GRAY));
             }
+            if (plugin.global.event) ls.addAll(plugin.highscoreLines);
             event.sidebar(PlayerHudPriority.HIGHEST, ls);
         } else if (state.gameState == GameState.PLACE) {
             Player player = event.getPlayer();
@@ -784,7 +783,10 @@ public final class Game {
                 : Math.max(0, (placeTime.toMillis() - (System.currentTimeMillis() - state.placeStarted) - 1L) / 1000L + 1L);
             ls.add(text("Time Left ", GRAY)
                    .append(text(seconds + "s", WHITE)));
+            if (plugin.global.event) ls.addAll(plugin.highscoreLines);
             event.sidebar(PlayerHudPriority.HIGHEST, ls);
+        } else if (plugin.global.event) {
+            event.sidebar(PlayerHudPriority.HIGHEST, plugin.highscoreLines);
         }
     }
 

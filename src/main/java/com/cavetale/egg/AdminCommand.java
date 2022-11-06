@@ -1,7 +1,11 @@
 package com.cavetale.egg;
 
+import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandWarn;
+import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.util.Json;
+import com.cavetale.fam.trophy.Highscore;
+import com.cavetale.mytems.item.trophy.TrophyCategory;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +23,8 @@ import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import static com.cavetale.egg.Vec.v;
+import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
 public final class AdminCommand implements TabExecutor {
@@ -33,6 +39,7 @@ public final class AdminCommand implements TabExecutor {
                              "viewer", "grass", "area", "state",
                              "clearwinners", "snow", "signs", "hi",
                              "info", "debug", "snowman", "event",
+                             "clearscores", "addscore", "rewardscores",
                              "main", "startbutton")
                 .filter(it -> it.contains(low))
                 .collect(Collectors.toList());
@@ -301,6 +308,32 @@ public final class AdminCommand implements TabExecutor {
             }
             plugin.saveGlobal();
             sender.sendMessage(Component.text("Event mode set to " + plugin.global.event, NamedTextColor.YELLOW));
+            return true;
+        }
+        case "clearscores": {
+            plugin.global.scores.clear();
+            plugin.saveGlobal();
+            plugin.computeHighscore();
+            sender.sendMessage(text("Scores cleared", YELLOW));
+            return true;
+        }
+        case "addscore": {
+            if (args.length != 3) return false;
+            final PlayerCache target = CommandArgCompleter.requirePlayerCache(args[1]);
+            final int value = CommandArgCompleter.requireInt(args[2], i -> i != 0);
+            plugin.global.addScore(target.uuid, value);
+            plugin.saveGlobal();
+            plugin.computeHighscore();
+            sender.sendMessage(text("Score of " + target.name + " now is " + plugin.global.getScore(target.uuid), YELLOW));
+            return true;
+        }
+        case "rewardscores": {
+            int result = Highscore.reward(plugin.global.scores,
+                                          "extreme_grass_growing_event",
+                                          TrophyCategory.HOE,
+                                          ExtremeGrassGrowingPlugin.TITLE,
+                                          hi -> "You collected " + hi.score + " point" + (hi.score == 1 ? "" : "s"));
+            sender.sendMessage(text(result + " players rewarded", YELLOW));
             return true;
         }
         case "main": {
