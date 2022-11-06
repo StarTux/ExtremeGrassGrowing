@@ -1,5 +1,6 @@
 package com.cavetale.egg;
 
+import com.cavetale.core.command.CommandWarn;
 import com.cavetale.core.util.Json;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import static com.cavetale.egg.Vec.v;
 
 @RequiredArgsConstructor
 public final class AdminCommand implements TabExecutor {
@@ -46,6 +48,15 @@ public final class AdminCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args) {
+        try {
+            return onCommand2(sender, args);
+        } catch (CommandWarn warn) {
+            warn.send(sender);
+            return true;
+        }
+    }
+
+    private boolean onCommand2(CommandSender sender, String[] args) {
         Player player = sender instanceof Player ? (Player) sender : null;
         Game game = player != null ? plugin.gameAt(player.getLocation()) : null;
         if (args.length == 0) {
@@ -97,11 +108,7 @@ public final class AdminCommand implements TabExecutor {
                 player.sendMessage(Component.text("Already exists: " + oldGame.getName(), NamedTextColor.RED));
                 return true;
             }
-            Cuboid selection = WorldEdit.getSelection(player);
-            if (selection == null) {
-                player.sendMessage(Component.text("No selection!", NamedTextColor.RED));
-                return true;
-            }
+            Cuboid selection = requireSelection(player);
             Game newGame = new Game(plugin, name);
             newGame.arena = new Arena();
             newGame.state = new State();
@@ -142,11 +149,7 @@ public final class AdminCommand implements TabExecutor {
                 default: return false;
                 }
             }
-            Cuboid sel = WorldEdit.getSelection(player);
-            if (sel == null) {
-                sender.sendMessage("No selection made.");
-                return true;
-            }
+            Cuboid sel = requireSelection(player);
             World world = player.getWorld();
             Set<Vec> blocks = new HashSet<>();
             for (int y = sel.lo.y; y <= sel.hi.y; y += 1) {
@@ -181,11 +184,7 @@ public final class AdminCommand implements TabExecutor {
                 player.sendMessage(Component.text("Game not found: " + args[1], NamedTextColor.RED));
                 return true;
             }
-            Cuboid selection = WorldEdit.getSelection(player);
-            if (selection == null) {
-                player.sendMessage(Component.text("No selection!", NamedTextColor.RED));
-                return true;
-            }
+            Cuboid selection = requireSelection(player);
             theGame.arena.area = selection;
             theGame.arena.world = player.getWorld().getName();
             theGame.saveArena();
@@ -333,11 +332,7 @@ public final class AdminCommand implements TabExecutor {
                 sender.sendMessage(Component.text("Extreme Grass Growing arena required!", NamedTextColor.RED));
                 return true;
             }
-            Cuboid selection = WorldEdit.getSelection(player);
-            if (selection == null) {
-                player.sendMessage(Component.text("No selection!", NamedTextColor.RED));
-                return true;
-            }
+            Cuboid selection = requireSelection(player);
             game.arena.startButton = selection.lo;
             game.saveArena();
             player.sendMessage(Component.text("Start button set to " + game.arena.startButton, NamedTextColor.YELLOW));
@@ -364,7 +359,7 @@ public final class AdminCommand implements TabExecutor {
             default: return false;
             }
         }
-        Cuboid sel = WorldEdit.getSelection(player);
+        Cuboid sel = requireSelection(player);
         if (sel != null) {
             World world = player.getWorld();
             Set<Vec> blocks = new HashSet<>();
@@ -391,5 +386,10 @@ public final class AdminCommand implements TabExecutor {
             player.sendMessage("No selection made.");
         }
         return true;
+    }
+
+    private Cuboid requireSelection(Player player) {
+        com.cavetale.core.struct.Cuboid c = com.cavetale.core.struct.Cuboid.requireSelectionOf(player);
+        return new Cuboid(v(c.ax, c.ay, c.az), v(c.bx, c.by, c.bz));
     }
 }
