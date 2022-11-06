@@ -641,6 +641,13 @@ public final class Game {
                     || arena.grassBlocks.contains(vec.add(0, -2, 0));
                 if (forbidden) warpPlayerOutside(player, TeleportCause.PLUGIN);
             }
+            if (isMainEventGame()) {
+                for (Placed placed : state.placedSigns) {
+                    plugin.global.addScore(placed.owner, 1);
+                }
+                plugin.saveGlobal();
+                plugin.computeHighscore();
+            }
             announceArena(ChatColor.GREEN + "Watch the grass spread!");
             break;
         }
@@ -748,9 +755,9 @@ public final class Game {
     }
 
     protected void onPlayerHud(PlayerHudEvent event) {
+        List<Component> ls = new ArrayList<>();
+        Player player = event.getPlayer();
         if (state.gameState == GameState.GROW) {
-            Player player = event.getPlayer();
-            List<Component> ls = new ArrayList<>();
             if (plugin.global.debug) {
                 ls.add(text("DEBUG MODE", RED));
             }
@@ -768,11 +775,7 @@ public final class Game {
             for (String l : alls) {
                 ls.add(text(l, GRAY));
             }
-            if (plugin.global.event) ls.addAll(plugin.highscoreLines);
-            event.sidebar(PlayerHudPriority.HIGHEST, ls);
         } else if (state.gameState == GameState.PLACE) {
-            Player player = event.getPlayer();
-            List<Component> ls = new ArrayList<>();
             if (findPlacedSign(player) == null) {
                 ls.add(text("Place your signs!", GREEN));
             } else {
@@ -783,11 +786,12 @@ public final class Game {
                 : Math.max(0, (placeTime.toMillis() - (System.currentTimeMillis() - state.placeStarted) - 1L) / 1000L + 1L);
             ls.add(text("Time Left ", GRAY)
                    .append(text(seconds + "s", WHITE)));
-            if (plugin.global.event) ls.addAll(plugin.highscoreLines);
-            event.sidebar(PlayerHudPriority.HIGHEST, ls);
-        } else if (plugin.global.event) {
-            event.sidebar(PlayerHudPriority.HIGHEST, plugin.highscoreLines);
         }
+        if (isMainEventGame()) {
+            ls.add(join(noSeparators(), text("Your Score ", GRAY), text(plugin.global.getScore(player.getUniqueId()), GREEN)));
+            ls.addAll(plugin.highscoreLines);
+        }
+        event.sidebar(PlayerHudPriority.HIGHEST, ls);
     }
 
     /**
