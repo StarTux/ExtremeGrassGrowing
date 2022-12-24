@@ -35,7 +35,8 @@ public final class AdminCommand implements TabExecutor {
         if (args.length == 0) return null;
         String low = args[args.length - 1].toLowerCase();
         if (args.length == 1) {
-            return Stream.of("reload", "list", "tp", "create",
+            return Stream.of("start", "stop",
+                             "reload", "list", "tp", "create",
                              "viewer", "grass", "area", "state",
                              "clearwinners", "snow", "signs", "hi",
                              "info", "debug", "snowman", "event",
@@ -77,6 +78,26 @@ public final class AdminCommand implements TabExecutor {
             return false;
         }
         switch (args[0]) {
+        case "start": {
+            if (game == null) game = plugin.getMainGame();
+            if (game == null) throw new CommandWarn("Game not found!");
+            if (game.getGameState() == GameState.PLACE) {
+                game.setupGameState(GameState.GROW);
+            } else {
+                game.cleanUp();
+                game.setupGameState(GameState.PLACE);
+            }
+            sender.sendMessage(text("Started game " + game.getName(), AQUA));
+            return true;
+        }
+        case "stop": {
+            if (game == null) game = plugin.getMainGame();
+            if (game == null) throw new CommandWarn("Game not found!");
+            game.cleanUp();
+            game.setupGameState(GameState.PAUSE);
+            sender.sendMessage(text("Stopped game " + game.getName(), YELLOW));
+            return true;
+        }
         case "reload": {
             plugin.unloadGames();
             plugin.loadGames();

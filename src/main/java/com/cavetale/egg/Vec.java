@@ -31,4 +31,9 @@ public final class Vec {
     public Vec add(int dx, int dy, int dz) {
         return v(x + dx, y + dy, z + dz);
     }
+
+    @Override
+    public String toString() {
+        return x + " " + y + " " + z;
+    }
 }

@@ -124,6 +124,13 @@ public final class Game {
 
     protected void enable() {
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+        for (UUID uuid : List.copyOf(state.snowmen)) {
+            if (Bukkit.getEntity(uuid) instanceof Snowman snowman) {
+                snowmen.add(snowman);
+            } else {
+                state.snowmen.remove(uuid);
+            }
+        }
     }
 
     protected void disable() {
@@ -155,6 +162,21 @@ public final class Game {
             as.remove();
         }
         armorStands.clear();
+        cleanUpSnowmen();
+    }
+
+    protected void cleanUpSnowmen() {
+        for (Snowman snowman : snowmen) {
+            snowman.remove();
+        }
+        snowmen.clear();
+        for (UUID uuid : state.snowmen) {
+            Entity entity = Bukkit.getEntity(uuid);
+            if (entity != null && entity instanceof Snowman snowman) {
+                snowman.remove();
+            }
+        }
+        state.snowmen.clear();
     }
 
     public boolean isInArena(Entity entity) {
@@ -358,14 +380,12 @@ public final class Game {
         updateArmorStands(world);
         if (world == null) return;
         if (state.snow) {
-            for (Entity e : world.getEntities()) {
-                if (!(e instanceof Snowman)) continue;
-                Snowman snowman = (Snowman) e;
-                if (!snowman.isValid()) {
-                    snowmen.remove(snowman);
-                    continue;
+            if (snowmen.isEmpty()) {
+                spawnSnowman();
+            } else {
+                for (Snowman snowman : List.copyOf(snowmen)) {
+                    handleSnowman(snowman);
                 }
-                handleSnowman(snowman);
             }
         } else {
             if (growCooldown == 0) {
@@ -422,31 +442,60 @@ public final class Game {
         }
     }
 
+    protected Snowman spawnSnowman() {
+        List<Vec> grassBlocks = List.copyOf(arena.grassBlocks);
+        Vec goal = grassBlocks.get(random.nextInt(grassBlocks.size()));
+        return spawnSnowman(goal.toBlock(getWorld()).getLocation().add(0.5, 1.0, 0.5));
+    }
+
     protected Snowman spawnSnowman(Location location) {
         Snowman snowman = location.getWorld().spawn(location, Snowman.class, s -> {
+                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.15);
                 s.setDerp(true);
+                s.setPersistent(false);
             });
+        if (snowman == null) {
+            plugin.getLogger().severe("Failed spawning snowman at " + Vec.v(location));
+            return null;
+        }
         snowmen.add(snowman);
         state.snowmen.add(snowman.getUniqueId());
-        snowman.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.6);
+        plugin.getLogger().info("Spawned snowman at " + Vec.v(location));
         return snowman;
     }
 
     private void handleSnowman(Snowman snowman) {
-        Block block = snowman.getLocation().getBlock().getRelative(0, -1, 0);
+        if (!snowman.isValid() || snowman.isDead()) {
+            state.snowmen.remove(snowman.getUniqueId());
+            snowmen.remove(snowman);
+        }
+        Location location = snowman.getLocation();
+        Block block = location.getBlock().getRelative(0, -1, 0);
         Vec vec = Vec.v(block);
-        if (!arena.grassBlocks.contains(vec)) return;
-        if (block.getType() == Material.SNOW_BLOCK) return;
-        if (!snowmen.contains(snowman)) snowmen.add(snowman);
-        block.setType(Material.SNOW_BLOCK);
+        if (!arena.grassBlocks.contains(vec)) {
+            snowman.remove();
+            return;
+        }
+        if (block.getType() != Material.SNOW_BLOCK) {
+            block.setType(Material.SNOW_BLOCK);
+            block.getRelative(0, 1, 0).setType(Material.SNOW);
+        }
         if (purgeSign(block, text("Snowman"))) {
+            snowman.getPathfinder().stopPathfinding();
             spawnSnowman(block.getLocation().add(0.5, 1.0, 0.5));
             for (Snowman other : snowmen) {
                 other.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 9, true, false));
             }
             checkForWinner();
+        } else {
+            var path = snowman.getPathfinder().getCurrentPath();
+            if (path == null || path.getFinalPoint() == null || path.getFinalPoint().distanceSquared(location) < 1.0) {
+                List<Vec> grassBlocks = List.copyOf(arena.grassBlocks);
+                Vec goal = grassBlocks.get(random.nextInt(grassBlocks.size()));
+                snowman.getPathfinder().moveTo(goal.toBlock(snowman.getWorld()).getLocation().add(0.5, 1.0, 0.5));
+                plugin.getLogger().info("Moving snowman to " + goal);
+            }
         }
-        block.getRelative(0, 1, 0).setType(Material.SNOW);
     }
 
     /**
@@ -561,6 +610,10 @@ public final class Game {
         }
     }
 
+    public GameState getGameState() {
+        return state.gameState;
+    }
+
     protected void setupGameState(GameState gameState) {
         switch (gameState) {
         case PAUSE: {
@@ -653,19 +706,7 @@ public final class Game {
         }
         case END: {
             state.endStarted = System.currentTimeMillis();
-            if (state.snow) {
-                for (Snowman snowman : snowmen) {
-                    snowman.remove();
-                }
-                snowmen.clear();
-                for (UUID uuid : state.snowmen) {
-                    Entity entity = Bukkit.getEntity(uuid);
-                    if (entity != null && entity instanceof Snowman snowman) {
-                        snowman.remove();
-                    }
-                }
-                state.snowmen.clear();
-            }
+            cleanUpSnowmen();
             break;
         }
         default: throw new IllegalStateException(gameState.name());
