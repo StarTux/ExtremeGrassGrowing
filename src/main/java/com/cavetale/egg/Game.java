@@ -450,7 +450,7 @@ public final class Game {
 
     protected Snowman spawnSnowman(Location location) {
         Snowman snowman = location.getWorld().spawn(location, Snowman.class, s -> {
-                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.15);
+                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.25);
                 s.setDerp(true);
                 s.setPersistent(false);
             });
@@ -489,7 +489,7 @@ public final class Game {
             checkForWinner();
         } else {
             var path = snowman.getPathfinder().getCurrentPath();
-            if (path == null || path.getFinalPoint() == null || path.getFinalPoint().distanceSquared(location) < 1.0) {
+            if (path == null || path.getFinalPoint() == null || path.getFinalPoint().distanceSquared(location) < 0.5) {
                 List<Vec> grassBlocks = List.copyOf(arena.grassBlocks);
                 Vec goal = grassBlocks.get(random.nextInt(grassBlocks.size()));
                 snowman.getPathfinder().moveTo(goal.toBlock(snowman.getWorld()).getLocation().add(0.5, 1.0, 0.5));
