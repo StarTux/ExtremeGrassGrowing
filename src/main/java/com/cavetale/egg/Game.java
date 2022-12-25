@@ -29,7 +29,6 @@ import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -450,7 +449,7 @@ public final class Game {
 
     protected Snowman spawnSnowman(Location location) {
         Snowman snowman = location.getWorld().spawn(location, Snowman.class, s -> {
-                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.5);
+                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3);
                 s.setDerp(true);
                 s.setPersistent(false);
             });
@@ -478,7 +477,6 @@ public final class Game {
         }
         if (block.getType() != Material.SNOW_BLOCK) {
             block.setType(Material.SNOW_BLOCK);
-            block.getRelative(0, 1, 0).setType(Material.SNOW);
         }
         if (purgeSign(block, text("Snowman"))) {
             snowman.getPathfinder().stopPathfinding();
@@ -490,12 +488,14 @@ public final class Game {
         } else {
             var path = snowman.getPathfinder().getCurrentPath();
             if (path == null || path.getFinalPoint() == null || path.getFinalPoint().distanceSquared(location) < 0.5) {
-                List<Vec> grassBlocks = List.copyOf(arena.grassBlocks);
+                List<Vec> grassBlocks = new ArrayList<>(arena.grassBlocks);
+                grassBlocks.removeIf(v -> v.toBlock(getWorld()).getType() == Material.SNOW_BLOCK);
+                if (grassBlocks.isEmpty()) grassBlocks = List.copyOf(arena.grassBlocks);
                 Vec goal = grassBlocks.get(random.nextInt(grassBlocks.size()));
                 snowman.getPathfinder().moveTo(goal.toBlock(snowman.getWorld()).getLocation().add(0.5, 1.0, 0.5));
-                plugin.getLogger().info("Moving snowman to " + goal);
             }
         }
+        block.getRelative(0, 1, 0).setType(Material.SNOW);
     }
 
     /**
@@ -524,7 +524,7 @@ public final class Game {
         BlockState blockState = signBlock.getState();
         if (blockState instanceof Sign) {
             Sign sign = (Sign) blockState;
-            for (Component line: sign.lines()) {
+            for (Component line : sign.lines()) {
                 if (line == null) continue;
                 announceArena(text()
                               .append(VanillaItems.componentOf(Material.OAK_SIGN))
@@ -701,7 +701,11 @@ public final class Game {
                 plugin.saveGlobal();
                 plugin.computeHighscore();
             }
-            announceArena(ChatColor.GREEN + "Watch the grass spread!");
+            if (state.snow) {
+                announceArena(text("Watch the snowmen move!", AQUA));
+            } else {
+                announceArena(text("Watch the grass spread!", GREEN));
+            }
             break;
         }
         case END: {
@@ -740,7 +744,7 @@ public final class Game {
         state.placedSigns.add(placed);
         saveState();
         event.setCancelled(false);
-        player.sendMessage(ChatColor.GREEN + "Sign placed");
+        player.sendMessage(text("Sign placed", GREEN));
         if (isMainEventGame()) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ml add " + player.getName());
         }
