@@ -4,6 +4,9 @@ import com.cavetale.core.event.block.PlayerBlockAbilityQuery;
 import com.cavetale.core.event.block.PlayerBreakBlockEvent;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
+import com.cavetale.core.event.minigame.MinigameFlag;
+import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.item.ItemKinds;
@@ -265,6 +268,13 @@ public final class Game {
                     Mytems.KITTY_COIN.giveItemStack(winningPlayer, 1);
                 }
             }
+            do {
+                MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.EXTREME_GRASS_GROWING);
+                if (isMainEventGame()) event.addFlags(MinigameFlag.EVENT);
+                event.addPlayerUuids(state.players);
+                if (winner.owner != null) event.addWinnerUuid(winner.owner);
+                event.callEvent();
+            } while (false);
         } else if (state.placedSigns.size() == 0) {
             if (isMainEventGame()) {
                 plugin.getLogger().info(name + ": Nobody wins the game!");
@@ -272,6 +282,12 @@ public final class Game {
             announceArena(text("\nNobody wins the game!\n ", GREEN));
             cleanUp();
             setupGameState(GameState.END);
+            do {
+                MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.EXTREME_GRASS_GROWING);
+                if (isMainEventGame()) event.addFlags(MinigameFlag.EVENT);
+                event.addPlayerUuids(state.players);
+                event.callEvent();
+            } while (false);
         }
     }
 
@@ -691,6 +707,10 @@ public final class Game {
                     || arena.grassBlocks.contains(vec.add(0, -1, 0))
                     || arena.grassBlocks.contains(vec.add(0, -2, 0));
                 if (forbidden) warpPlayerOutside(player, TeleportCause.PLUGIN);
+            }
+            state.players.clear();
+            for (Placed placed : state.placedSigns) {
+                state.players.add(placed.owner);
             }
             if (isMainEventGame()) {
                 for (Placed placed : state.placedSigns) {

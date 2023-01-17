@@ -17,4 +17,5 @@ public final class State {
     protected long placeStarted;
     protected long endStarted;
     protected List<UUID> snowmen = new ArrayList<>();
+    protected List<UUID> players = new ArrayList<>();
 }
