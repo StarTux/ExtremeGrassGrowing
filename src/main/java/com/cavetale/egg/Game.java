@@ -63,11 +63,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import static com.cavetale.core.util.CamelCase.toCamelCase;
-import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.newline;
 import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
-import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 /**
@@ -247,12 +246,11 @@ public final class Game {
             Component winnerDisplayName = winningPlayer != null
                 ? winningPlayer.displayName()
                 : text(winner.ownerName);
-            announceArena(join(noSeparators(), new Component[] {
-                        newline(),
-                        winnerDisplayName,
-                        text(" wins the game!"),
-                        newline(),
-                    }).color(GREEN));
+            announceArena(textOfChildren(newline(),
+                                         winnerDisplayName, text(" wins the game!"),
+                                         newline())
+                          .color(GREEN));
+            announceSign(winner);
             state.winners.add(winnerName);
             setupGameState(GameState.END);
             if (isMainEventGame()) {
@@ -520,20 +518,8 @@ public final class Game {
         Component ownerName = owner != null
             ? owner.displayName()
             : text(placed.ownerName);
-        announceArena(join(noSeparators(), ownerName, text(" was destroyed by "), destroyer).color(GREEN));
-        Block signBlock = block.getWorld().getBlockAt(placed.x, placed.y, placed.z);
-        BlockState blockState = signBlock.getState();
-        if (blockState instanceof Sign) {
-            Sign sign = (Sign) blockState;
-            for (Component line : sign.lines()) {
-                if (line == null) continue;
-                announceArena(text()
-                              .append(VanillaItems.componentOf(Material.OAK_SIGN))
-                              .append(space())
-                              .append(line)
-                              .build());
-            }
-        }
+        announceArena(textOfChildren(ownerName, text(" was destroyed by "), destroyer).color(GREEN));
+        announceSign(placed);
         World world = block.getWorld();
         world.playSound(block.getLocation(),
                         Sound.ENTITY_GENERIC_EXPLODE,
@@ -585,6 +571,17 @@ public final class Game {
             }
             plugin.saveGlobal();
             plugin.computeHighscore();
+        }
+        return true;
+    }
+
+    private boolean announceSign(Placed placed) {
+        Block signBlock = getWorld().getBlockAt(placed.x, placed.y, placed.z);
+        BlockState blockState = signBlock.getState();
+        if (!(blockState instanceof Sign sign)) return false;
+        for (Component line : sign.lines()) {
+            if (line == null) continue;
+            announceArena(textOfChildren(VanillaItems.componentOf(Material.OAK_SIGN), space(), line));
         }
         return true;
     }
@@ -834,7 +831,7 @@ public final class Game {
                    .append(text(seconds + "s", WHITE)));
         }
         if (isMainEventGame()) {
-            ls.add(join(noSeparators(), text("Your Score ", GRAY), text(plugin.global.getScore(player.getUniqueId()), GREEN)));
+            ls.add(textOfChildren(text("Your Score ", GRAY), text(plugin.global.getScore(player.getUniqueId()), GREEN)));
             ls.addAll(plugin.highscoreLines);
         }
         event.sidebar(PlayerHudPriority.HIGHEST, ls);
