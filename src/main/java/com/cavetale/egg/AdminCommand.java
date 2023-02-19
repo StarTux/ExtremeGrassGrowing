@@ -392,6 +392,9 @@ public final class AdminCommand implements TabExecutor {
             player.sendMessage(Component.text("Start button set to " + game.arena.startButton, NamedTextColor.YELLOW));
             return true;
         }
+        case "checkforwinner":
+            if (game != null) game.checkForWinner();
+            return true;
         default: return false;
         }
     }

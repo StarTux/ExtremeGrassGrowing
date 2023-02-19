@@ -211,7 +211,11 @@ public final class Game {
         boolean removed = purgeSign(block, flowerName);
         if (removed) {
             growCooldown = 200;
+            state.didBreakSign = true;
             saveState();
+        } else {
+            growCooldown = 1;
+            state.didBreakSign = false;
         }
         BlockData flowerData = flower.createBlockData();
         block.getRelative(0, 1, 0).setBlockData(flowerData, false);
@@ -237,8 +241,7 @@ public final class Game {
         return plugin.global.event && name.equals(plugin.global.mainGame);
     }
 
-    private void checkForWinner() {
-        if (plugin.global.debug) return;
+    protected void checkForWinner() {
         if (state.placedSigns.size() == 1) {
             cleanUp();
             Placed winner = state.placedSigns.get(0);
@@ -402,16 +405,13 @@ public final class Game {
                 }
             }
         } else {
-            if (growCooldown == 0) {
-                if (!state.spreadOptions.isEmpty()) {
-                    Collections.shuffle(state.spreadOptions);
-                    Vec vec = state.spreadOptions.get(0);
-                    Block dirtBlock = vec.toBlock(world);
-                    state.spreadOptions.clear();
-                    spreadTo(dirtBlock);
-                    dirtBlock.setType(Material.GRASS_BLOCK);
-                }
-                if (growCooldown < 80) growCooldown = 80; // spreadTo can update it
+            if (growCooldown <= 0 && !state.spreadOptions.isEmpty()) {
+                Collections.shuffle(state.spreadOptions);
+                Vec vec = state.spreadOptions.get(0);
+                Block dirtBlock = vec.toBlock(world);
+                state.spreadOptions.clear();
+                spreadTo(dirtBlock);
+                dirtBlock.setType(Material.GRASS_BLOCK);
                 return;
             }
             growCooldown -= 1;
@@ -420,32 +420,37 @@ public final class Game {
                 List<Block> grassBlocks = arena.grassBlocks.stream()
                     .map(v -> world.getBlockAt(v.x, v.y, v.z))
                     .filter(b -> b.getType() == Material.GRASS_BLOCK)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toCollection(ArrayList::new));
                 if (grassBlocks.isEmpty()) return;
-                Block grassBlock = grassBlocks.get(random.nextInt(grassBlocks.size()));
-                for (int dx = -1; dx <= 1; dx += 1) {
-                    for (int dz = -1; dz <= 1; dz += 1) {
-                        for (int dy = -1; dy <= 1; dy += 1) {
-                            Block dirtBlock = grassBlock.getRelative(dx, dy, dz);
-                            if (!dirts.contains(dirtBlock.getType())) continue;
-                            if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
-                            Vec vec = Vec.v(dirtBlock);
-                            if (!state.spreadOptions.contains(vec)) {
-                                state.spreadOptions.add(vec);
-                                for (Placed placed : state.placedSigns) {
-                                    if (placed.x == vec.x && placed.z == vec.z) {
-                                        state.signOption = true;
+                Collections.shuffle(grassBlocks);
+                GRASS_BLOCKS:
+                for (Block grassBlock : grassBlocks) {
+                    for (int dx = -1; dx <= 1; dx += 1) {
+                        for (int dz = -1; dz <= 1; dz += 1) {
+                            for (int dy = -1; dy <= 1; dy += 1) {
+                                Block dirtBlock = grassBlock.getRelative(dx, dy, dz);
+                                if (!dirts.contains(dirtBlock.getType())) continue;
+                                if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
+                                Vec vec = Vec.v(dirtBlock);
+                                if (!state.spreadOptions.contains(vec)) {
+                                    state.spreadOptions.add(vec);
+                                    for (Placed placed : state.placedSigns) {
+                                        if (placed.x == vec.x && placed.z == vec.z) {
+                                            state.signOption = true;
+                                            growCooldown = Math.max(growCooldown, 100);
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    if (!state.spreadOptions.isEmpty()) break GRASS_BLOCKS;
                 }
             }
-            if (growCooldown < 80 && growCooldown > 10 && !state.spreadOptions.isEmpty() && !state.signOption) {
-                growCooldown = 10;
+            if (growCooldown > 1 && !state.didBreakSign && !state.spreadOptions.isEmpty() && !state.signOption) {
+                growCooldown = 1;
             }
-            if (growCooldown < 60 && !state.spreadOptions.isEmpty()) {
+            if (growCooldown < 100 && !state.spreadOptions.isEmpty()) {
                 for (Vec vec : state.spreadOptions) {
                     Block b = vec.toBlock(world);
                     world.spawnParticle(Particle.BLOCK_DUST, b.getLocation().add(0.5, 1.5, 0.5),
@@ -619,6 +624,8 @@ public final class Game {
                         as.setGravity(false);
                         as.setMarker(true);
                     });
+            } else {
+                armorStand.customName(ownerName);
             }
             armorStands.put(vec, armorStand);
         }
@@ -821,8 +828,9 @@ public final class Game {
         List<Component> ls = new ArrayList<>();
         Player player = event.getPlayer();
         if (state.gameState == GameState.GROW) {
-            if (plugin.global.debug) {
+            if (plugin.global.debug && player.hasPermission("egg.admin")) {
                 ls.add(text("DEBUG MODE", RED));
+                ls.add(text("" + growCooldown, YELLOW));
             }
             int left = state.placedSigns.size();
             ls.add(text("Signs Left ", GREEN)

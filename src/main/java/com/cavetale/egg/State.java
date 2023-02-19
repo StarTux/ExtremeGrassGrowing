@@ -14,6 +14,7 @@ public final class State {
     protected boolean snow = false;
     protected List<Vec> spreadOptions = new ArrayList<>();
     protected boolean signOption = false;
+    protected boolean didBreakSign = false;
     protected long placeStarted;
     protected long endStarted;
     protected List<UUID> snowmen = new ArrayList<>();
