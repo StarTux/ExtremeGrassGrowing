@@ -36,4 +36,12 @@ public final class Vec {
     public String toString() {
         return x + " " + y + " " + z;
     }
+
+    public int hdist(Vec other) {
+        return Math.abs(x - other.x) + Math.abs(z - other.z);
+    }
+
+    public int hdist(Block b) {
+        return Math.abs(x - b.getX()) + Math.abs(z - b.getZ());
+    }
 }

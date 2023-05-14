@@ -13,6 +13,7 @@ public final class State {
     protected List<String> winners = new ArrayList<>();
     protected boolean snow = false;
     protected List<Vec> spreadOptions = new ArrayList<>();
+    protected Vec lastSpread;
     protected boolean signOption = false;
     protected boolean didBreakSign = false;
     protected long placeStarted;

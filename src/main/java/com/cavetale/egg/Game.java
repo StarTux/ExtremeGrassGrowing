@@ -423,6 +423,10 @@ public final class Game {
                     .collect(Collectors.toCollection(ArrayList::new));
                 if (grassBlocks.isEmpty()) return;
                 Collections.shuffle(grassBlocks);
+                if (state.lastSpread != null) {
+                    grassBlocks.sort((a, b) -> Integer.compare(state.lastSpread.hdist(a),
+                                                               state.lastSpread.hdist(b)));
+                }
                 GRASS_BLOCKS:
                 for (Block grassBlock : grassBlocks) {
                     for (int dx = -1; dx <= 1; dx += 1) {
@@ -432,6 +436,7 @@ public final class Game {
                                 if (!dirts.contains(dirtBlock.getType())) continue;
                                 if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
                                 Vec vec = Vec.v(dirtBlock);
+                                state.lastSpread = vec;
                                 if (!state.spreadOptions.contains(vec)) {
                                     state.spreadOptions.add(vec);
                                     for (Placed placed : state.placedSigns) {
@@ -688,6 +693,7 @@ public final class Game {
                             }
                         } else {
                             block.setType(Material.GRASS_BLOCK);
+                            state.lastSpread = Vec.v(block);
                         }
                         count += 1;
                     }
