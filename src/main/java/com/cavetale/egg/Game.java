@@ -116,6 +116,7 @@ public final class Game {
     protected File stateFile;
     protected Duration placeTime = Duration.ofSeconds(120);
     protected Duration endTime = Duration.ofSeconds(30);
+    private static final int MIN_GROW_TIME = 5;
 
     protected Game(final ExtremeGrassGrowingPlugin plugin, final String name) {
         this.plugin = plugin;
@@ -214,7 +215,7 @@ public final class Game {
             state.didBreakSign = true;
             saveState();
         } else {
-            growCooldown = 1;
+            growCooldown = MIN_GROW_TIME;
             state.didBreakSign = false;
         }
         BlockData flowerData = flower.createBlockData();
@@ -452,8 +453,8 @@ public final class Game {
                     if (!state.spreadOptions.isEmpty()) break GRASS_BLOCKS;
                 }
             }
-            if (growCooldown > 1 && !state.didBreakSign && !state.spreadOptions.isEmpty() && !state.signOption) {
-                growCooldown = 1;
+            if (growCooldown > MIN_GROW_TIME && !state.didBreakSign && !state.spreadOptions.isEmpty() && !state.signOption) {
+                growCooldown = MIN_GROW_TIME;
             }
             if (growCooldown < 100 && !state.spreadOptions.isEmpty()) {
                 for (Vec vec : state.spreadOptions) {
