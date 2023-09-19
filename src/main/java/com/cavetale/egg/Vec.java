@@ -38,10 +38,14 @@ public final class Vec {
     }
 
     public int hdist(Vec other) {
-        return Math.abs(x - other.x) + Math.abs(z - other.z);
+        final int dx = x - other.x;
+        final int dz = z - other.z;
+        return dx * dx + dz * dz;
     }
 
     public int hdist(Block b) {
-        return Math.abs(x - b.getX()) + Math.abs(z - b.getZ());
+        final int dx = x - b.getX();
+        final int dz = z - b.getZ();
+        return dx * dx + dz * dz;
     }
 }

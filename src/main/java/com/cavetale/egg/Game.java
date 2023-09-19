@@ -206,6 +206,7 @@ public final class Game {
     }
 
     private void spreadTo(Block block) {
+        state.lastSpread = Vec.v(block);
         Material flower = flowers.get(random.nextInt(flowers.size()));
         Component flowerName = flower.isItem()
             ? ItemKinds.chatDescription(new ItemStack(flower))
@@ -438,7 +439,6 @@ public final class Game {
                                 if (!dirts.contains(dirtBlock.getType())) continue;
                                 if (!arena.grassBlocks.contains(Vec.v(dirtBlock))) continue;
                                 Vec vec = Vec.v(dirtBlock);
-                                state.lastSpread = vec;
                                 if (!state.spreadOptions.contains(vec)) {
                                     state.spreadOptions.add(vec);
                                     for (Placed placed : state.placedSigns) {
@@ -677,9 +677,7 @@ public final class Game {
             World world = getWorld();
             if (blocks.size() > 0) {
                 int count = 0;
-                for (int i = 0; i < 100; i += 1) {
-                    Vec vec = blocks.get(i % blocks.size());
-                    Block block = world.getBlockAt(vec.x, vec.y, vec.z);
+                for (Vec vec : blocks) {
                     boolean conflicts = false;
                     for (Placed placed: state.placedSigns) {
                         if (placed.x == vec.x && placed.z == vec.z) {
@@ -688,6 +686,7 @@ public final class Game {
                         }
                     }
                     if (!conflicts) {
+                        Block block = world.getBlockAt(vec.x, vec.y, vec.z);
                         if (state.snow) {
                             if (count == 0) {
                                 Location loc = block.getLocation().add(0.5, 1.0, 0.5);
@@ -838,7 +837,7 @@ public final class Game {
         if (state.gameState == GameState.GROW) {
             if (plugin.global.debug && player.hasPermission("egg.admin")) {
                 ls.add(text("DEBUG MODE", RED));
-                ls.add(text("" + growCooldown, YELLOW));
+                ls.add(text("" + state.lastSpread, YELLOW));
             }
             int left = state.placedSigns.size();
             ls.add(text("Signs Left ", GREEN)
