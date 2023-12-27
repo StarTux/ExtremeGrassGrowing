@@ -12,6 +12,7 @@ import com.cavetale.core.font.VanillaItems;
 import com.cavetale.core.item.ItemKinds;
 import com.cavetale.core.util.Json;
 import com.cavetale.mytems.Mytems;
+import com.cavetale.mytems.util.Text;
 import com.destroystokyo.paper.MaterialTags;
 import java.io.File;
 import java.time.Duration;
@@ -48,6 +49,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.block.data.Bisected;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Openable;
+import org.bukkit.block.sign.Side;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -87,7 +89,7 @@ public final class Game {
     protected List<Material> flowers =
         Stream.concat(Stream.of(Material.values())
                       .filter(m -> Tag.FLOWERS.isTagged(m) && m != Material.WITHER_ROSE),
-                      Stream.of(Material.GRASS, Material.TALL_GRASS,
+                      Stream.of(Material.SHORT_GRASS, Material.TALL_GRASS,
                                 // Material.BROWN_MUSHROOM,
                                 // Material.RED_MUSHROOM,
                                 Material.CRIMSON_FUNGUS,
@@ -231,7 +233,7 @@ public final class Game {
                                    Sound.BLOCK_GRASS_BREAK,
                                    SoundCategory.MASTER,
                                    1.0f, 1.0f);
-        block.getWorld().spawnParticle(Particle.BLOCK_DUST,
+        block.getWorld().spawnParticle(Particle.BLOCK_CRACK,
                                        block.getLocation().add(0.5, 1.5, 0.5),
                                        8,
                                        0.2, 0.2, 0.2,
@@ -460,9 +462,9 @@ public final class Game {
             if (growCooldown < 100 && !state.spreadOptions.isEmpty()) {
                 for (Vec vec : state.spreadOptions) {
                     Block b = vec.toBlock(world);
-                    world.spawnParticle(Particle.BLOCK_DUST, b.getLocation().add(0.5, 1.5, 0.5),
+                    world.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5, 1.5, 0.5),
                                         1, 0.125, 0.125, 0.125, 0,
-                                        Material.GRASS.createBlockData());
+                                        Material.SHORT_GRASS.createBlockData());
                 }
             }
         }
@@ -607,7 +609,7 @@ public final class Game {
         Block signBlock = getWorld().getBlockAt(placed.x, placed.y, placed.z);
         BlockState blockState = signBlock.getState();
         if (!(blockState instanceof Sign sign)) return false;
-        for (Component line : sign.lines()) {
+        for (Component line : sign.getSide(Side.FRONT).lines()) {
             if (line == null) continue;
             announceArena(textOfChildren(VanillaItems.componentOf(Material.OAK_SIGN), space(), line));
         }
@@ -846,7 +848,7 @@ public final class Game {
                 .map(s -> s.ownerName)
                 .sorted()
                 .collect(Collectors.joining(" "));
-            List<String> alls = Text.wrap(all, 24);
+            List<String> alls = Text.wrapLine(all, 24);
             if (alls.size() > 3) {
                 alls = alls.subList(0, 3);
             }
