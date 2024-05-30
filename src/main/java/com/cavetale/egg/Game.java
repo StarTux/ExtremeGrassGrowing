@@ -61,8 +61,8 @@ import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -234,7 +234,7 @@ public final class Game {
                                    Sound.BLOCK_GRASS_BREAK,
                                    SoundCategory.MASTER,
                                    1.0f, 1.0f);
-        block.getWorld().spawnParticle(Particle.BLOCK_CRACK,
+        block.getWorld().spawnParticle(Particle.BLOCK,
                                        block.getLocation().add(0.5, 1.5, 0.5),
                                        8,
                                        0.2, 0.2, 0.2,
@@ -463,7 +463,7 @@ public final class Game {
             if (growCooldown < 100 && !state.spreadOptions.isEmpty()) {
                 for (Vec vec : state.spreadOptions) {
                     Block b = vec.toBlock(world);
-                    world.spawnParticle(Particle.BLOCK_CRACK, b.getLocation().add(0.5, 1.5, 0.5),
+                    world.spawnParticle(Particle.BLOCK, b.getLocation().add(0.5, 1.5, 0.5),
                                         1, 0.125, 0.125, 0.125, 0,
                                         Material.SHORT_GRASS.createBlockData());
                 }
@@ -512,7 +512,7 @@ public final class Game {
             snowman.getPathfinder().stopPathfinding();
             spawnSnowman(block.getLocation().add(0.5, 1.0, 0.5));
             for (Snowman other : snowmen) {
-                other.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 200, 9, true, false));
+                other.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 200, 9, true, false));
             }
             checkForWinner();
         } else {
@@ -556,7 +556,7 @@ public final class Game {
                         Sound.ENTITY_GENERIC_EXPLODE,
                         SoundCategory.MASTER,
                         1.0f, 2.0f);
-        world.spawnParticle(Particle.EXPLOSION_LARGE,
+        world.spawnParticle(Particle.EXPLOSION,
                             block.getLocation().add(0.5, 1.5, 0.5),
                             8,
                             0.2, 0.2, 0.2,
