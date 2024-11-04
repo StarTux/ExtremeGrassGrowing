@@ -88,7 +88,9 @@ public final class Game {
     protected boolean explodeGrass = true;
     protected List<Material> flowers =
         Stream.concat(Stream.of(Material.values())
-                      .filter(m -> Tag.FLOWERS.isTagged(m) && m != Material.WITHER_ROSE),
+                      .filter(m -> Tag.FLOWERS.isTagged(m)
+                              && m != Material.WITHER_ROSE
+                              && m != Material.SPORE_BLOSSOM),
                       Stream.of(Material.SHORT_GRASS, Material.TALL_GRASS,
                                 // Material.BROWN_MUSHROOM,
                                 // Material.RED_MUSHROOM,
