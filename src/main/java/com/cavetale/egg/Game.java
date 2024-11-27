@@ -481,7 +481,7 @@ public final class Game {
 
     protected Snowman spawnSnowman(Location location) {
         Snowman snowman = location.getWorld().spawn(location, Snowman.class, s -> {
-                s.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.3);
+                s.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.3);
                 s.setDerp(true);
                 s.setPersistent(false);
             });
