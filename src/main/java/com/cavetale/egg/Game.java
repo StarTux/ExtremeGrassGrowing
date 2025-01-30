@@ -108,7 +108,8 @@ public final class Game {
                 Material.MANGROVE_SIGN,
                 Material.OAK_SIGN,
                 Material.SPRUCE_SIGN,
-                Material.WARPED_SIGN);
+                Material.WARPED_SIGN,
+                Material.PALE_OAK_SIGN);
     protected List<Material> dirts = List.of(new Material[] {
             Material.DIRT,
             Material.COARSE_DIRT,
