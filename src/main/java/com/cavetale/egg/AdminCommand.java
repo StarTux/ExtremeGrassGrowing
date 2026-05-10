@@ -355,6 +355,7 @@ public final class AdminCommand implements TabExecutor {
                                           ExtremeGrassGrowingPlugin.TITLE,
                                           hi -> "You collected " + hi.score + " point" + (hi.score == 1 ? "" : "s"));
             sender.sendMessage(text(result + " players rewarded", YELLOW));
+            Highscore.rewardMoneyWithFeedback(sender, plugin, plugin.global.scores, "Extreme Grass Growing");
             return true;
         }
         case "main": {
